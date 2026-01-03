@@ -161,3 +161,63 @@ func (f *FacebookProvider) getUserInfo(ctx context.Context, accessToken string) 
 func (f *FacebookProvider) GetProviderName() domain.AuthProvider {
 	return domain.AuthProviderFacebook
 }
+
+// VerifyAccessToken verifies a Facebook access token from frontend and returns user info
+func (f *FacebookProvider) VerifyAccessToken(ctx context.Context, accessToken string) (*domain.OAuthUserInfo, error) {
+	// First, verify the token with Facebook's debug endpoint
+	debugURL := fmt.Sprintf("https://graph.facebook.com/debug_token?input_token=%s&access_token=%s|%s",
+		accessToken, f.appID, f.appSecret)
+
+	debugReq, err := http.NewRequestWithContext(ctx, "GET", debugURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("%w: failed to create debug request", domain.ErrOAuthUserInfo)
+	}
+
+	client := &http.Client{}
+	debugResp, err := client.Do(debugReq)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", domain.ErrOAuthUserInfo, err)
+	}
+	defer debugResp.Body.Close()
+
+	if debugResp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(debugResp.Body)
+		return nil, fmt.Errorf("%w: token validation failed, status %d, body: %s", domain.ErrOAuthProviderError, debugResp.StatusCode, string(body))
+	}
+
+	var debugData struct {
+		Data struct {
+			AppID     string `json:"app_id"`
+			IsValid   bool   `json:"is_valid"`
+			UserID    string `json:"user_id"`
+			ExpiresAt int64  `json:"expires_at"`
+		} `json:"data"`
+	}
+
+	if err := json.NewDecoder(debugResp.Body).Decode(&debugData); err != nil {
+		return nil, fmt.Errorf("%w: failed to decode debug response", domain.ErrOAuthUserInfo)
+	}
+
+	// Verify token is valid and for this app
+	if !debugData.Data.IsValid {
+		return nil, fmt.Errorf("%w: token is not valid", domain.ErrOAuthProviderError)
+	}
+
+	if debugData.Data.AppID != f.appID {
+		return nil, fmt.Errorf("%w: token app_id mismatch", domain.ErrOAuthProviderError)
+	}
+
+	// Now get user info
+	userInfo, err := f.getUserInfo(ctx, accessToken)
+	if err != nil {
+		return nil, err
+	}
+
+	return &domain.OAuthUserInfo{
+		Provider:   domain.AuthProviderFacebook,
+		ProviderID: userInfo.ID,
+		Email:      userInfo.Email,
+		Name:       userInfo.Name,
+		AvatarURL:  userInfo.Picture.Data.URL,
+	}, nil
+}

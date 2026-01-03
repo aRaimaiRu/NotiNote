@@ -113,3 +113,59 @@ func (g *GoogleProvider) getUserInfo(ctx context.Context, accessToken string) (*
 func (g *GoogleProvider) GetProviderName() domain.AuthProvider {
 	return domain.AuthProviderGoogle
 }
+
+// VerifyIDToken verifies a Google ID token from frontend and returns user info
+func (g *GoogleProvider) VerifyIDToken(ctx context.Context, idToken string) (*domain.OAuthUserInfo, error) {
+	// Google's tokeninfo endpoint to verify ID token
+	tokenInfoURL := fmt.Sprintf("https://oauth2.googleapis.com/tokeninfo?id_token=%s", idToken)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", tokenInfoURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("%w: failed to create request", domain.ErrOAuthUserInfo)
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", domain.ErrOAuthUserInfo, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("%w: invalid token, status %d, body: %s", domain.ErrOAuthProviderError, resp.StatusCode, string(body))
+	}
+
+	var tokenInfo struct {
+		Aud           string `json:"aud"`           // Client ID
+		Sub           string `json:"sub"`           // User ID
+		Email         string `json:"email"`
+		EmailVerified string `json:"email_verified"`
+		Name          string `json:"name"`
+		Picture       string `json:"picture"`
+		GivenName     string `json:"given_name"`
+		FamilyName    string `json:"family_name"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&tokenInfo); err != nil {
+		return nil, fmt.Errorf("%w: failed to decode token info", domain.ErrOAuthUserInfo)
+	}
+
+	// Verify the token is for this client
+	if tokenInfo.Aud != g.config.ClientID {
+		return nil, fmt.Errorf("%w: token audience mismatch", domain.ErrOAuthProviderError)
+	}
+
+	// Verify email is verified
+	if tokenInfo.EmailVerified != "true" {
+		return nil, fmt.Errorf("%w: email not verified", domain.ErrOAuthUserInfo)
+	}
+
+	return &domain.OAuthUserInfo{
+		Provider:   domain.AuthProviderGoogle,
+		ProviderID: tokenInfo.Sub,
+		Email:      tokenInfo.Email,
+		Name:       tokenInfo.Name,
+		AvatarURL:  tokenInfo.Picture,
+	}, nil
+}

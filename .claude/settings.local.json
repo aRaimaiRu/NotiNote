@@ -3,7 +3,12 @@
     "allow": [
       "Bash(dir:*)",
       "Bash(powershell -Command:*)",
-      "Bash(go test:*)"
+      "Bash(go test:*)",
+      "Bash(tree:*)",
+      "Bash(go build:*)",
+      "Bash(ls:*)",
+      "Bash(go run:*)",
+      "Bash(make install-tools:*)"
     ],
     "deny": [],
     "ask": []
