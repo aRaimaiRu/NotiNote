@@ -1,0 +1,129 @@
+meta {
+  name: Delete Block
+  type: http
+  seq: 16
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/notes/1/blocks/block-1
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Response has success flag", function() {
+    expect(res.body).to.have.property('success');
+    expect(res.body.success).to.be.true;
+  });
+
+  test("Deleted block removed from blocks array", function() {
+    const blocks = res.body.data.blocks;
+    const deletedBlock = blocks.find(b => b.id === 'block-1');
+    expect(deletedBlock).to.not.exist;
+  });
+
+  test("Note updated_at timestamp changed", function() {
+    const note = res.body.data;
+    expect(note).to.have.property('updated_at').to.be.a('string');
+  });
+
+  test("Other blocks remain intact", function() {
+    const blocks = res.body.data.blocks;
+    expect(blocks.length).to.be.greaterThan(0);
+    blocks.forEach(block => {
+      expect(block).to.have.property('id').to.be.a('string');
+      expect(block).to.have.property('type').to.be.a('string');
+    });
+  });
+}
+
+docs {
+  # Delete Block
+  Delete a block from a note. This removes the block entirely from the note's block list.
+
+  ## Authentication
+  Required: Bearer token (JWT)
+
+  ## Path Parameters
+  - **id** (required): The ID of the note
+  - **block_id** (required): The ID of the block to delete
+
+  ## Response Format
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": 1,
+      "user_id": 1,
+      "title": "Meeting Notes",
+      "blocks": [
+        {
+          "id": "block-2",
+          "type": "paragraph",
+          "content": { ... },
+          "order": 0
+        }
+      ],
+      "is_archived": false,
+      "is_deleted": false,
+      "created_at": "2025-12-30T10:00:00Z",
+      "updated_at": "2025-12-30T14:15:00Z"
+    }
+  }
+  ```
+
+  ## Behavior
+  - Block is permanently removed from the note
+  - Remaining blocks maintain their content (not reordered)
+  - Note updated_at timestamp updated
+  - Cannot undo (consider archiving note instead if recovery needed)
+
+  ## Error Responses
+
+  ### 400 Bad Request - Block Not Found
+  ```json
+  {
+    "error": "block not found"
+  }
+  ```
+
+  ### 404 Not Found - Note Not Found
+  ```json
+  {
+    "error": "note not found"
+  }
+  ```
+
+  ### 403 Forbidden
+  ```json
+  {
+    "error": "access denied"
+  }
+  ```
+
+  ## Status Codes
+  - **200 OK**: Block successfully deleted
+  - **400 Bad Request**: Invalid block ID or block not found
+  - **401 Unauthorized**: Missing or invalid authentication
+  - **403 Forbidden**: Access denied to note
+  - **404 Not Found**: Note not found
+  - **500 Internal Server Error**: Server error
+
+  ## Related Endpoints
+  - POST /api/v1/notes/:id/blocks - Add new block
+  - PATCH /api/v1/notes/:id/blocks/:block_id - Update block
+  - PUT /api/v1/notes/:id/blocks - Replace all blocks
+  - POST /api/v1/notes/:id/blocks/reorder - Reorder blocks
+}

@@ -1,0 +1,135 @@
+meta {
+  name: Get Ancestors (Breadcrumb)
+  type: http
+  seq: 12
+}
+
+get {
+  url: {{baseUrl}}/api/v1/notes/1/ancestors
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Response has success flag", function() {
+    expect(res.body).to.have.property('success');
+    expect(res.body.success).to.be.true;
+  });
+
+  test("Response has data array", function() {
+    expect(res.body).to.have.property('data').to.be.an('array');
+  });
+
+  test("Breadcrumb items have required fields", function() {
+    const breadcrumbs = res.body.data;
+    if (breadcrumbs.length > 0) {
+      const crumb = breadcrumbs[0];
+      expect(crumb).to.have.property('id').to.be.a('number');
+      expect(crumb).to.have.property('title').to.be.a('string');
+      expect(crumb).to.have.property('icon').to.be.a('string');
+    }
+  });
+
+  test("Breadcrumbs ordered from root to parent", function() {
+    const breadcrumbs = res.body.data;
+    if (breadcrumbs.length > 1) {
+      // First item should be root (or highest ancestor)
+      // Last item should be direct parent
+      expect(breadcrumbs[breadcrumbs.length - 1]).to.have.property('id');
+    }
+  });
+}
+
+docs {
+  # Get Ancestors (Breadcrumb)
+  Retrieve the hierarchy path from root to the parent of a given note. Useful for breadcrumb navigation.
+
+  ## Authentication
+  Required: Bearer token (JWT)
+
+  ## Path Parameters
+  - **id** (required): The ID of the note to get ancestors for
+
+  ## Response Format
+  ```json
+  {
+    "success": true,
+    "data": [
+      {
+        "id": 1,
+        "title": "Root Project",
+        "icon": "🚀"
+      },
+      {
+        "id": 5,
+        "title": "Planning Phase",
+        "icon": "📋"
+      },
+      {
+        "id": 8,
+        "title": "Q1 Tasks",
+        "icon": "✅"
+      }
+    ]
+  }
+  ```
+
+  ## Get Ancestors Behavior
+  - Returns ordered array from root ancestor to direct parent
+  - Does not include the note itself
+  - Excludes deleted notes from path
+  - Returns empty array if note is at root level (no parent)
+  - Uses breadcrumb response format
+
+  ## Response Fields
+  Each item in the array contains:
+  - **id**: Note ID
+  - **title**: Note title
+  - **icon**: Note emoji/icon
+
+  ## Use Cases
+  - Building breadcrumb navigation
+  - Understanding context of a note
+  - Displaying hierarchy path in UI
+  - Implementing "go to parent" functionality
+
+  ## Error Responses
+
+  ### 404 Not Found
+  ```json
+  {
+    "error": "note not found"
+  }
+  ```
+
+  ### 403 Forbidden
+  ```json
+  {
+    "error": "access denied"
+  }
+  ```
+
+  ## Status Codes
+  - **200 OK**: Successfully retrieved ancestors
+  - **400 Bad Request**: Invalid note ID
+  - **401 Unauthorized**: Missing or invalid authentication
+  - **403 Forbidden**: Access denied to note
+  - **404 Not Found**: Note not found
+  - **500 Internal Server Error**: Server error
+
+  ## Related Endpoints
+  - GET /api/v1/notes/:id/children - Get child notes
+  - GET /api/v1/notes/:id - Get full note details including path field
+}

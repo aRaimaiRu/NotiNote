@@ -1,0 +1,141 @@
+meta {
+  name: Get Note
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/notes/1
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Response has success flag", function() {
+    expect(res.body).to.have.property('success');
+    expect(res.body.success).to.be.true;
+  });
+
+  test("Response has data object with note", function() {
+    expect(res.body).to.have.property('data');
+    const note = res.body.data;
+    expect(note).to.have.property('id').to.equal(1);
+  });
+
+  test("Note has all required fields", function() {
+    const note = res.body.data;
+    expect(note).to.have.property('id').to.be.a('number');
+    expect(note).to.have.property('user_id').to.be.a('number');
+    expect(note).to.have.property('title').to.be.a('string');
+    expect(note).to.have.property('blocks').to.be.an('array');
+    expect(note).to.have.property('path').to.be.a('string');
+    expect(note).to.have.property('depth').to.be.a('number');
+    expect(note).to.have.property('position').to.be.a('number');
+    expect(note).to.have.property('is_archived').to.be.a('boolean');
+    expect(note).to.have.property('is_deleted').to.be.a('boolean');
+    expect(note).to.have.property('created_at').to.be.a('string');
+    expect(note).to.have.property('updated_at').to.be.a('string');
+  });
+
+  test("Blocks array structure is valid", function() {
+    const note = res.body.data;
+    if (note.blocks.length > 0) {
+      const block = note.blocks[0];
+      expect(block).to.have.property('id').to.be.a('string');
+      expect(block).to.have.property('type').to.be.a('string');
+      expect(block).to.have.property('content').to.be.an('object');
+      expect(block).to.have.property('order').to.be.a('number');
+    }
+  });
+}
+
+docs {
+  # Get Note
+  Retrieve a specific note by ID with all its details including blocks and metadata.
+
+  ## Authentication
+  Required: Bearer token (JWT)
+
+  ## Path Parameters
+  - **id** (required): The ID of the note to retrieve
+
+  ## Response Format
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": 1,
+      "user_id": 1,
+      "parent_id": null,
+      "title": "Meeting Notes",
+      "icon": "📝",
+      "cover_image": "https://...",
+      "blocks": [
+        {
+          "id": "uuid-1",
+          "type": "heading_1",
+          "content": {
+            "rich_text": [
+              {
+                "text": "Q1 Planning Meeting",
+                "style": {
+                  "bold": true
+                }
+              }
+            ]
+          },
+          "order": 0
+        }
+      ],
+      "view_metadata": null,
+      "properties": {
+        "status": "completed",
+        "priority": "high"
+      },
+      "path": "/1",
+      "depth": 0,
+      "position": 0,
+      "is_archived": false,
+      "is_deleted": false,
+      "created_at": "2025-12-30T10:00:00Z",
+      "updated_at": "2025-12-30T11:00:00Z"
+    }
+  }
+  ```
+
+  ## Error Responses
+
+  ### 404 Not Found
+  ```json
+  {
+    "error": "note not found"
+  }
+  ```
+
+  ### 403 Forbidden
+  ```json
+  {
+    "error": "access denied"
+  }
+  ```
+
+  ## Status Codes
+  - **200 OK**: Successfully retrieved note
+  - **400 Bad Request**: Invalid note ID
+  - **401 Unauthorized**: Missing or invalid authentication
+  - **403 Forbidden**: Access denied to note
+  - **404 Not Found**: Note not found
+  - **500 Internal Server Error**: Server error
+}

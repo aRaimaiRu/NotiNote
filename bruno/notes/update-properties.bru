@@ -1,0 +1,241 @@
+meta {
+  name: Update Properties
+  type: http
+  seq: 19
+}
+
+put {
+  url: {{baseUrl}}/api/v1/notes/1/properties
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "properties": {
+      "status": "In Progress",
+      "priority": "High",
+      "assignee": "John Doe",
+      "due_date": "2025-12-31",
+      "tags": [
+        "important",
+        "urgent"
+      ],
+      "budget": 5000,
+      "completion_percentage": 75
+    }
+  }
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Response has success flag", function() {
+    expect(res.body).to.have.property('success');
+    expect(res.body.success).to.be.true;
+  });
+
+  test("Properties are updated in response", function() {
+    const note = res.body.data;
+    expect(note).to.have.property('properties').to.be.an('object');
+    expect(note.properties).to.have.property('status').to.equal('In Progress');
+    expect(note.properties).to.have.property('priority').to.equal('High');
+  });
+
+  test("All properties are present", function() {
+    const properties = res.body.data.properties;
+    expect(properties).to.have.property('status');
+    expect(properties).to.have.property('priority');
+    expect(properties).to.have.property('assignee');
+    expect(properties).to.have.property('due_date');
+    expect(properties).to.have.property('budget');
+  });
+
+  test("Note updated_at timestamp changed", function() {
+    const note = res.body.data;
+    expect(note).to.have.property('updated_at').to.be.a('string');
+  });
+}
+
+docs {
+  # Update Properties
+  Update custom properties on a note. Properties are key-value pairs that can store any data (status, priority, assignee, dates, etc.).
+
+  ## Authentication
+  Required: Bearer token (JWT)
+
+  ## Path Parameters
+  - **id** (required): The ID of the note
+
+  ## Request Body
+  ```json
+  {
+    "properties": {
+      "status": "In Progress",
+      "priority": "High",
+      "assignee": "user@example.com",
+      "due_date": "2025-12-31",
+      "tags": ["tag1", "tag2"],
+      "budget": 5000,
+      "completion_percentage": 75,
+      "is_important": true
+    }
+  }
+  ```
+
+  ### Field Specifications
+  - **properties** (required): Object with string keys and any JSON values
+  - Values can be: strings, numbers, booleans, arrays, or objects
+  - No strict schema; any property names and values supported
+
+  ## Typical Use Cases
+
+  ### Task Management
+  ```json
+  {
+    "properties": {
+      "status": "In Progress",
+      "priority": "High",
+      "assignee": "developer@example.com",
+      "due_date": "2025-12-31",
+      "estimated_hours": 8,
+      "completed_hours": 6
+    }
+  }
+  ```
+
+  ### Project Tracking
+  ```json
+  {
+    "properties": {
+      "phase": "Implementation",
+      "budget": 50000,
+      "spent": 32500,
+      "progress_percentage": 65,
+      "team_members": [
+        "alice@example.com",
+        "bob@example.com"
+      ]
+    }
+  }
+  ```
+
+  ### Meeting Notes
+  ```json
+  {
+    "properties": {
+      "date": "2025-12-30",
+      "attendees": [
+        "john@example.com",
+        "jane@example.com"
+      ],
+      "duration_minutes": 45,
+      "next_meeting_date": "2025-01-06",
+      "action_items_count": 3
+    }
+  }
+  ```
+
+  ### Article/Content
+  ```json
+  {
+    "properties": {
+      "author": "John Smith",
+      "status": "Draft",
+      "category": "Technology",
+      "tags": ["AI", "Machine Learning", "Python"],
+      "word_count": 2500,
+      "published_date": null,
+      "views": 0
+    }
+  }
+  ```
+
+  ## Response Format
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": 1,
+      "user_id": 1,
+      "title": "Q1 Planning",
+      "blocks": [],
+      "properties": {
+        "status": "In Progress",
+        "priority": "High",
+        "assignee": "John Doe",
+        "due_date": "2025-12-31",
+        "tags": ["important", "urgent"],
+        "budget": 5000,
+        "completion_percentage": 75
+      },
+      "view_metadata": null,
+      "is_archived": false,
+      "is_deleted": false,
+      "created_at": "2025-12-30T10:00:00Z",
+      "updated_at": "2025-12-30T15:00:00Z"
+    }
+  }
+  ```
+
+  ## Update Behavior
+  - Properties are merged (new/updated keys added, existing keys updated)
+  - Passing empty object {} leaves properties unchanged
+  - To remove a property, exclude it from the object (properties are not deleted)
+  - No type validation; any JSON type supported
+  - Properties updated_at timestamp in parent note
+
+  ## Property Types Supported
+  - **String**: Text values (status, assignee, category, etc.)
+  - **Number**: Numeric values (budget, hours, count, percentage, etc.)
+  - **Boolean**: True/false flags (is_important, is_completed, etc.)
+  - **Array**: Lists of values (tags, attendees, team_members, etc.)
+  - **Object**: Nested structures (custom complex data)
+  - **Null**: Absence of value (useful for optional fields)
+
+  ## Error Responses
+
+  ### 400 Bad Request - Invalid Properties
+  ```json
+  {
+    "error": "failed to update properties"
+  }
+  ```
+
+  ### 404 Not Found
+  ```json
+  {
+    "error": "note not found"
+  }
+  ```
+
+  ### 403 Forbidden
+  ```json
+  {
+    "error": "access denied"
+  }
+  ```
+
+  ## Status Codes
+  - **200 OK**: Properties successfully updated
+  - **400 Bad Request**: Invalid request body or validation error
+  - **401 Unauthorized**: Missing or invalid authentication
+  - **403 Forbidden**: Access denied to note
+  - **404 Not Found**: Note not found
+  - **500 Internal Server Error**: Server error
+
+  ## Related Endpoints
+  - PUT /api/v1/notes/:id/view - Configure database view (properties as columns)
+  - GET /api/v1/notes/:id - Get note with all properties
+  - PUT /api/v1/notes/:id - Update basic note metadata
+}

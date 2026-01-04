@@ -8,7 +8,9 @@
       "Bash(go build:*)",
       "Bash(ls:*)",
       "Bash(go run:*)",
-      "Bash(make install-tools:*)"
+      "Bash(make install-tools:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)"
     ],
     "deny": [],
     "ask": []

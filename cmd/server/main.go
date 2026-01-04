@@ -18,6 +18,7 @@ import (
 	"github.com/yourusername/notinoteapp/internal/adapters/secondary/database/postgres/repositories"
 	"github.com/yourusername/notinoteapp/internal/adapters/secondary/oauth"
 	"github.com/yourusername/notinoteapp/internal/application/services"
+	coreServices "github.com/yourusername/notinoteapp/internal/core/services"
 	"github.com/yourusername/notinoteapp/pkg/config"
 	"github.com/yourusername/notinoteapp/pkg/logger"
 	"github.com/yourusername/notinoteapp/pkg/utils"
@@ -65,6 +66,7 @@ func main() {
 
 	// Initialize repositories
 	userRepo := repositories.NewUserRepository(db)
+	noteRepo := repositories.NewNoteRepository(db)
 
 	// Initialize utilities
 	passwordHasher := utils.NewBcryptPasswordHasher()
@@ -92,13 +94,16 @@ func main() {
 
 	stateGenerator := utils.NewRedisStateGenerator(redisClient)
 
-	// Initialize auth service
+	// Initialize services
 	authService := services.NewAuthService(
 		userRepo,
 		passwordHasher,
 		tokenService,
 		stateGenerator,
 	)
+
+	// Import core services package for note service
+	noteService := coreServices.NewNoteService(noteRepo)
 
 	// Register OAuth providers
 	if cfg.OAuth.Google.ClientID != "" && cfg.OAuth.Google.ClientSecret != "" {
@@ -128,10 +133,12 @@ func main() {
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(authService)
+	noteHandler := handlers.NewNoteHandler(noteService)
 
 	// Setup router
 	router := httpAdapter.SetupRouter(httpAdapter.RouterConfig{
 		AuthHandler: authHandler,
+		NoteHandler: noteHandler,
 		Config:      cfg,
 	})
 

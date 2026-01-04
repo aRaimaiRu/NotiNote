@@ -1,0 +1,110 @@
+meta {
+  name: Archive Note
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/v1/notes/1/archive
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Response has success flag", function() {
+    expect(res.body).to.have.property('success');
+    expect(res.body.success).to.be.true;
+  });
+
+  test("Note is marked as archived", function() {
+    const note = res.body.data;
+    expect(note).to.have.property('is_archived').to.equal(true);
+  });
+
+  test("Updated timestamp changed", function() {
+    const note = res.body.data;
+    expect(note).to.have.property('updated_at').to.be.a('string');
+  });
+}
+
+docs {
+  # Archive Note
+  Archive a note to hide it from regular view while keeping it accessible. Archived notes can be unarchived.
+
+  ## Authentication
+  Required: Bearer token (JWT)
+
+  ## Path Parameters
+  - **id** (required): The ID of the note to archive
+
+  ## Response Format
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": 1,
+      "user_id": 1,
+      "parent_id": null,
+      "title": "Meeting Notes",
+      "icon": "📝",
+      "cover_image": "",
+      "blocks": [],
+      "view_metadata": null,
+      "properties": {},
+      "path": "/1",
+      "depth": 0,
+      "position": 0,
+      "is_archived": true,
+      "is_deleted": false,
+      "created_at": "2025-12-30T10:00:00Z",
+      "updated_at": "2025-12-30T12:45:00Z"
+    }
+  }
+  ```
+
+  ## Archive Behavior
+  - Sets `is_archived: true` flag
+  - Does not soft-delete the note
+  - Archived notes are excluded from default list view
+  - Can be filtered with `archived=true` parameter in list endpoint
+  - Child notes are NOT automatically archived
+
+  ## Error Responses
+
+  ### 404 Not Found
+  ```json
+  {
+    "error": "note not found"
+  }
+  ```
+
+  ### 403 Forbidden
+  ```json
+  {
+    "error": "access denied"
+  }
+  ```
+
+  ## Status Codes
+  - **200 OK**: Note successfully archived
+  - **400 Bad Request**: Invalid note ID
+  - **401 Unauthorized**: Missing or invalid authentication
+  - **403 Forbidden**: Access denied to note
+  - **404 Not Found**: Note not found
+  - **500 Internal Server Error**: Server error
+
+  ## Related Endpoints
+  - POST /api/v1/notes/:id/unarchive - Unarchive a note
+}

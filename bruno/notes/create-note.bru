@@ -1,0 +1,150 @@
+meta {
+  name: Create Note
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/notes
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "title": "New Project Planning",
+    "parent_id": null,
+    "icon": "🚀",
+    "cover_image": ""
+  }
+}
+
+vars:pre-request {
+  baseUrl: http://localhost:8080
+  authToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJlbWFpbCI6ImZpcnN0MTgwMTFAZ21haWwuY29tIiwiaXNzIjoibm90aW5vdGVhcHAiLCJleHAiOjE3Njc2MTQ5NjAsIm5iZiI6MTc2NzUyODU2MCwiaWF0IjoxNzY3NTI4NTYwfQ.ADi4eaEziJH2VsnMW0JUxpgPUyzQ8xk1iKL4Ebfr-AU
+}
+
+tests {
+  test("Status code is 201 Created", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+  
+  test("Response has success flag", function() {
+    expect(res.body).to.have.property('success');
+    expect(res.body.success).to.be.true;
+  });
+  
+  test("Response has created note data", function() {
+    expect(res.body).to.have.property('data');
+    const note = res.body.data;
+    expect(note).to.have.property('id').to.be.a('number');
+    expect(note).to.have.property('title').to.equal('New Project Planning');
+    expect(note).to.have.property('icon').to.equal('🚀');
+  });
+  
+  test("Created note has correct defaults", function() {
+    const note = res.body.data;
+    expect(note).to.have.property('blocks').to.be.an('array').that.is.empty;
+    expect(note).to.have.property('is_archived').to.equal(false);
+    expect(note).to.have.property('is_deleted').to.equal(false);
+    expect(note).to.have.property('depth').to.equal(0);
+  });
+  
+  test("Created note has timestamps", function() {
+    const note = res.body.data;
+    expect(note).to.have.property('created_at').to.be.a('string');
+    expect(note).to.have.property('updated_at').to.be.a('string');
+  });
+}
+
+docs {
+  # Create Note
+  Create a new note for the authenticated user. Notes can be created as root notes (no parent) or as child notes under an existing parent.
+  
+  ## Authentication
+  Required: Bearer token (JWT)
+  
+  ## Request Body
+  ```json
+  {
+    "title": "Note Title",
+    "parent_id": null,
+    "icon": "📝",
+    "cover_image": ""
+  }
+  ```
+  
+  ### Field Specifications
+  - **title** (required): Note title (1-500 characters)
+  - **parent_id** (optional): ID of parent note for hierarchy. Max nesting depth is 10 levels
+  - **icon** (optional): Emoji or icon identifier
+  - **cover_image** (optional): URL to cover image
+  
+  ## Response Format
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": 2,
+      "user_id": 1,
+      "parent_id": null,
+      "title": "New Project Planning",
+      "icon": "🚀",
+      "cover_image": "",
+      "blocks": [],
+      "view_metadata": null,
+      "properties": {},
+      "path": "/2",
+      "depth": 0,
+      "position": 0,
+      "is_archived": false,
+      "is_deleted": false,
+      "created_at": "2025-12-30T12:00:00Z",
+      "updated_at": "2025-12-30T12:00:00Z"
+    }
+  }
+  ```
+  
+  ## Validation Rules
+  - Title: Required, 1-500 characters
+  - Parent ID: Must be a valid note ID owned by user
+  - Max depth: Cannot exceed 10 levels of nesting
+  
+  ## Error Responses
+  
+  ### 400 Bad Request - Invalid Title
+  ```json
+  {
+    "error": "note title is required and must be between 1 and 500 characters"
+  }
+  ```
+  
+  ### 400 Bad Request - Max Depth Exceeded
+  ```json
+  {
+    "error": "maximum nesting depth (10 levels) exceeded"
+  }
+  ```
+  
+  ### 403 Forbidden - Invalid Parent
+  ```json
+  {
+    "error": "access denied"
+  }
+  ```
+  
+  ## Status Codes
+  - **201 Created**: Note successfully created
+  - **400 Bad Request**: Invalid request body or validation error
+  - **401 Unauthorized**: Missing or invalid authentication
+  - **403 Forbidden**: Access denied to parent note
+  - **500 Internal Server Error**: Server error
+}

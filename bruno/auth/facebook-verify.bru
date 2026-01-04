@@ -1,0 +1,160 @@
+meta {
+  name: Facebook OAuth Verify
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/facebook/verify
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "access_token": "EAABsBZC1iHgBABhVJdAI7LaXrZCvZBjZBvZAlPpT8I0YI7T0eZBNWqD4QLoMAVqk9D5lv5xL8kVJZBpNaZClNGVMOH4R"
+  }
+}
+
+tests {
+  test("Status is 200 OK", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Response has success flag", function() {
+    expect(res.getBody().success).to.equal(true);
+  });
+
+  test("Response contains user data", function() {
+    const body = res.getBody();
+    expect(body.data).to.exist;
+    expect(body.data.user).to.exist;
+    expect(body.data.user.email).to.be.a("string");
+  });
+
+  test("User provider is facebook", function() {
+    const body = res.getBody();
+    expect(body.data.user.provider).to.equal("facebook");
+  });
+
+  test("Response contains access token", function() {
+    const body = res.getBody();
+    expect(body.data.access_token).to.be.a("string");
+    expect(body.data.access_token.length).to.be.above(0);
+  });
+
+  test("Response contains refresh token", function() {
+    const body = res.getBody();
+    expect(body.data.refresh_token).to.be.a("string");
+    expect(body.data.refresh_token.length).to.be.above(0);
+  });
+
+  test("User has profile picture from Facebook", function() {
+    const body = res.getBody();
+    expect(body.data.user.avatar_url).to.be.a("string");
+  });
+}
+
+docs {
+  # Facebook OAuth Token Verification
+
+  ## Description
+  Verify Facebook access token obtained from frontend Facebook Login SDK integration. This endpoint handles both new user registration and existing user login via Facebook OAuth.
+
+  ## Authentication
+  None required (public endpoint)
+
+  ## Request Body
+  - **access_token** (string, required): Facebook access token from Facebook Login SDK (frontend-initiated)
+
+  ## Flow
+  1. User clicks "Login with Facebook" button on frontend
+  2. Frontend calls Facebook Login SDK to get access token
+  3. Frontend sends access token to this endpoint
+  4. Backend verifies token with Facebook Graph API
+  5. If user doesn't exist, creates new account
+  6. Returns authentication response with tokens
+
+  ## Response (200 OK)
+  ```json
+  {
+    "success": true,
+    "data": {
+      "user": {
+        "id": 3,
+        "email": "jane.smith@facebook.com",
+        "name": "Jane Smith",
+        "provider": "facebook",
+        "avatar_url": "https://platform-lookaside.fbsbx.com/platform/profilepic/...",
+        "is_active": true,
+        "created_at": "2026-01-03T10:00:00Z"
+      },
+      "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+      "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+      "token_type": "Bearer",
+      "expires_in": 86400
+    }
+  }
+  ```
+
+  ## Token Details
+  - **Access Token**: Valid for 24 hours, use for authenticated requests
+  - **Refresh Token**: Valid for 7 days, use to refresh access token
+  - **Token Type**: Always "Bearer"
+
+  ## How to Get Access Token
+  ### Using Facebook SDK for JavaScript
+  ```javascript
+  // Initialize Facebook SDK
+  FB.init({
+    appId: 'YOUR_APP_ID',
+    xfbml: true,
+    version: 'v18.0'
+  });
+
+  // Trigger login
+  FB.login(function(response) {
+    if (response.authResponse) {
+      const accessToken = response.authResponse.accessToken;
+
+      // Send to backend
+      fetch('/api/v1/auth/facebook/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ access_token: accessToken })
+      });
+    }
+  }, {scope: 'public_profile,email'});
+  ```
+
+  ## Account Linking
+  - If user with same email exists, will link Facebook provider to existing account
+  - User can have multiple authentication methods
+  - Profile picture updated from Facebook if not already set
+
+  ## Scopes Required
+  - `public_profile`: Access user name and profile picture
+  - `email`: Access user email address
+
+  ## Error Responses
+  - **400 Bad Request**: Invalid request format
+  - **401 Unauthorized**: Invalid or expired access token, failed Facebook verification
+  - **403 Forbidden**: Account is inactive
+  - **500 Internal Server Error**: Server error during verification
+
+  ## Example cURL
+  ```bash
+  curl -X POST http://localhost:8080/api/v1/auth/facebook/verify \
+    -H "Content-Type: application/json" \
+    -d '{
+      "access_token": "EAABsBZC1iHgBABh..."
+    }'
+  ```
+
+  ## Security
+  - Access tokens are verified with Facebook Graph API
+  - Tokens expire based on Facebook's token expiration policy
+  - Token permissions (scopes) are validated
+  - Recommended to use short-lived tokens (expires in ~2 hours)
+  - Use long-lived tokens for server-to-server communication only
+}

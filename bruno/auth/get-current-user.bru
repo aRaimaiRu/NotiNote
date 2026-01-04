@@ -1,0 +1,139 @@
+meta {
+  name: Get Current User Profile
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/v1/me
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+vars:pre-request {
+  baseUrl: http://localhost:8080
+  authToken: '''
+    Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJlbWFpbCI6ImZpcnN0MTgwMTFAZ21haWwuY29tIiwiaXNzIjoibm90aW5vdGVhcHAiLCJleHAiOjE3Njc2MTExNDUsIm5iZiI6MTc2NzUyNDc0NSwiaWF0IjoxNzY3NTI0NzQ1fQ.qXrXd8MOTleZbSnVJcLyPleIAZ-HkwhaN162UAvZR6E
+    
+  '''
+}
+
+tests {
+  test("Status is 200 OK", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Response has success flag", function() {
+    expect(res.getBody().success).to.equal(true);
+  });
+  
+  test("Response contains user data", function() {
+    const body = res.getBody();
+    expect(body.data).to.exist;
+    expect(body.data.id).to.be.a("number");
+    expect(body.data.email).to.be.a("string");
+    expect(body.data.name).to.be.a("string");
+  });
+  
+  test("User has required fields", function() {
+    const data = res.getBody().data;
+    expect(data.id).to.be.above(0);
+    expect(data.email).to.include("@");
+    expect(data.name.length).to.be.above(0);
+    expect(data.provider).to.be.oneOf(["email", "google", "facebook"]);
+    expect(data.is_active).to.equal(true);
+  });
+  
+  test("User has timestamps", function() {
+    const data = res.getBody().data;
+    expect(data.created_at).to.be.a("string");
+    expect(data.updated_at).to.be.a("string");
+  });
+  
+  test("Timestamps are ISO 8601 format", function() {
+    const data = res.getBody().data;
+    expect(new Date(data.created_at)).to.be.instanceof(Date);
+    expect(new Date(data.updated_at)).to.be.instanceof(Date);
+  });
+}
+
+docs {
+  # Get Current User Profile
+  
+  ## Description
+  Retrieve the profile information of the currently authenticated user. This is a protected endpoint that requires a valid JWT access token in the Authorization header.
+  
+  ## Authentication
+  Required: Bearer token (JWT access token from login or registration)
+  
+  ## Request Headers
+  - **Authorization**: `Bearer <access_token>` (required)
+  
+  ## Response (200 OK)
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": 1,
+      "email": "john.doe@example.com",
+      "name": "John Doe",
+      "provider": "email",
+      "avatar_url": "",
+      "is_active": true,
+      "created_at": "2026-01-03T10:00:00Z",
+      "updated_at": "2026-01-03T10:00:00Z"
+    }
+  }
+  ```
+  
+  ## Response Fields
+  - **id** (number): Unique user identifier
+  - **email** (string): User email address
+  - **name** (string): User display name
+  - **provider** (string): Authentication provider ("email", "google", or "facebook")
+  - **avatar_url** (string): URL to user profile picture (optional)
+  - **is_active** (boolean): Account active status
+  - **created_at** (string): ISO 8601 timestamp of account creation
+  - **updated_at** (string): ISO 8601 timestamp of last profile update
+  
+  ## Usage
+  - Verify current authenticated user's identity
+  - Load user profile on application startup
+  - Display user information in profile page
+  - Verify token validity
+  
+  ## Error Responses
+  - **401 Unauthorized**: Missing or invalid authorization token
+  - **404 Not Found**: User not found in database (should not happen with valid token)
+  - **500 Internal Server Error**: Server error fetching user profile
+  
+  ## Example cURL
+  ```bash
+  curl -X GET http://localhost:8080/api/v1/me \
+    -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  ```
+  
+  ## JavaScript Fetch Example
+  ```javascript
+  const response = await fetch('http://localhost:8080/api/v1/me', {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`
+    }
+  });
+  
+  const user = await response.json();
+  console.log(user.data);
+  ```
+  
+  ## Notes
+  - This endpoint verifies the validity of your access token
+  - Use this immediately after login to confirm successful authentication
+  - If returns 401, access token has expired - use refresh token to get new one
+  - Safe to call frequently (no rate limiting)
+  - User profile data is cached minimally, reflects current database state
+}

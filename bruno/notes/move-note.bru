@@ -1,0 +1,125 @@
+meta {
+  name: Move Note
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/api/v1/notes/1/move
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "new_parent_id": 5,
+    "position": 2
+  }
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Response has success flag", function() {
+    expect(res.body).to.have.property('success');
+    expect(res.body.success).to.be.true;
+  });
+
+  test("Response has success message", function() {
+    expect(res.body).to.have.property('message');
+    expect(res.body.message).to.equal('note moved successfully');
+  });
+}
+
+docs {
+  # Move Note
+  Move a note to a different parent note and optionally change its position among siblings. Enforces hierarchy constraints (max depth, no circular references).
+
+  ## Authentication
+  Required: Bearer token (JWT)
+
+  ## Path Parameters
+  - **id** (required): The ID of the note to move
+
+  ## Request Body
+  ```json
+  {
+    "new_parent_id": 5,
+    "position": 2
+  }
+  ```
+
+  ### Field Specifications
+  - **new_parent_id** (optional): ID of new parent note. Set to null to move to root level
+  - **position** (required): New position among siblings (0-based index)
+
+  ## Response Format
+  ```json
+  {
+    "success": true,
+    "message": "note moved successfully"
+  }
+  ```
+
+  ## Move Behavior
+  - Updates note's parent and depth
+  - Changes position in sibling order
+  - Updates materialized path for efficient hierarchy queries
+  - Validates no circular references (note cannot be descendant of itself)
+  - Enforces max nesting depth of 10 levels
+  - Updates all child notes' depth values
+
+  ## Validation Rules
+  - Cannot move note to itself as parent
+  - Cannot create circular hierarchy
+  - New parent depth + 1 must not exceed max depth (10)
+  - Position must be valid for target parent's children count
+
+  ## Error Responses
+
+  ### 400 Bad Request - Circular Reference
+  ```json
+  {
+    "error": "circular reference detected"
+  }
+  ```
+
+  ### 400 Bad Request - Max Depth Exceeded
+  ```json
+  {
+    "error": "maximum nesting depth (10 levels) exceeded"
+  }
+  ```
+
+  ### 404 Not Found
+  ```json
+  {
+    "error": "note not found"
+  }
+  ```
+
+  ### 403 Forbidden
+  ```json
+  {
+    "error": "access denied"
+  }
+  ```
+
+  ## Status Codes
+  - **200 OK**: Note successfully moved
+  - **400 Bad Request**: Invalid request body or validation error
+  - **401 Unauthorized**: Missing or invalid authentication
+  - **403 Forbidden**: Access denied to note or parent
+  - **404 Not Found**: Note or parent not found
+  - **500 Internal Server Error**: Server error
+}

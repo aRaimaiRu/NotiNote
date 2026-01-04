@@ -1,0 +1,108 @@
+meta {
+  name: Unarchive Note
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/api/v1/notes/1/unarchive
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Response has success flag", function() {
+    expect(res.body).to.have.property('success');
+    expect(res.body.success).to.be.true;
+  });
+
+  test("Note is marked as unarchived", function() {
+    const note = res.body.data;
+    expect(note).to.have.property('is_archived').to.equal(false);
+  });
+
+  test("Updated timestamp changed", function() {
+    const note = res.body.data;
+    expect(note).to.have.property('updated_at').to.be.a('string');
+  });
+}
+
+docs {
+  # Unarchive Note
+  Restore an archived note back to the active view.
+
+  ## Authentication
+  Required: Bearer token (JWT)
+
+  ## Path Parameters
+  - **id** (required): The ID of the note to unarchive
+
+  ## Response Format
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": 1,
+      "user_id": 1,
+      "parent_id": null,
+      "title": "Meeting Notes",
+      "icon": "📝",
+      "cover_image": "",
+      "blocks": [],
+      "view_metadata": null,
+      "properties": {},
+      "path": "/1",
+      "depth": 0,
+      "position": 0,
+      "is_archived": false,
+      "is_deleted": false,
+      "created_at": "2025-12-30T10:00:00Z",
+      "updated_at": "2025-12-30T12:50:00Z"
+    }
+  }
+  ```
+
+  ## Unarchive Behavior
+  - Sets `is_archived: false` flag
+  - Makes note visible in default list view
+  - Does not affect child notes' archive status
+
+  ## Error Responses
+
+  ### 404 Not Found
+  ```json
+  {
+    "error": "note not found"
+  }
+  ```
+
+  ### 403 Forbidden
+  ```json
+  {
+    "error": "access denied"
+  }
+  ```
+
+  ## Status Codes
+  - **200 OK**: Note successfully unarchived
+  - **400 Bad Request**: Invalid note ID
+  - **401 Unauthorized**: Missing or invalid authentication
+  - **403 Forbidden**: Access denied to note
+  - **404 Not Found**: Note not found
+  - **500 Internal Server Error**: Server error
+
+  ## Related Endpoints
+  - POST /api/v1/notes/:id/archive - Archive a note
+}

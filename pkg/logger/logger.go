@@ -223,8 +223,9 @@ func extractFileName(fullPath string) string {
 
 // isTerminal checks if the output is a terminal
 func isTerminal() bool {
-	fileInfo, _ := os.Stdout.Stat()
-	return (fileInfo.Mode() & os.ModeCharDevice) != 0
+	// On Windows, always enable colors for modern terminals (Windows Terminal, VS Code, etc.)
+	// The os.ModeCharDevice check doesn't work reliably on Windows
+	return true
 }
 
 // Init initializes the logger

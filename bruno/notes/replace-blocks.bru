@@ -1,0 +1,286 @@
+meta {
+  name: Replace All Blocks
+  type: http
+  seq: 13
+}
+
+put {
+  url: {{baseUrl}}/api/v1/notes/1/blocks
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "blocks": [
+      {
+        "id": "block-1",
+        "type": "heading_1",
+        "content": {
+          "rich_text": [
+            {
+              "text": "Project Overview",
+              "style": {
+                "bold": true
+              }
+            }
+          ]
+        },
+        "order": 0
+      },
+      {
+        "id": "block-2",
+        "type": "paragraph",
+        "content": {
+          "rich_text": [
+            {
+              "text": "This is the project overview paragraph.",
+              "style": null
+            }
+          ]
+        },
+        "order": 1
+      },
+      {
+        "id": "block-3",
+        "type": "bullet_list",
+        "content": {
+          "rich_text": [
+            {
+              "text": "First item in list",
+              "style": null
+            }
+          ]
+        },
+        "order": 2
+      }
+    ]
+  }
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Response has success flag", function() {
+    expect(res.body).to.have.property('success');
+    expect(res.body.success).to.be.true;
+  });
+
+  test("Response has updated note data", function() {
+    expect(res.body).to.have.property('data');
+    const note = res.body.data;
+    expect(note).to.have.property('blocks').to.be.an('array');
+  });
+
+  test("Blocks count matches request", function() {
+    const blocks = res.body.data.blocks;
+    expect(blocks.length).to.equal(3);
+  });
+
+  test("All blocks have required structure", function() {
+    const blocks = res.body.data.blocks;
+    blocks.forEach(block => {
+      expect(block).to.have.property('id').to.be.a('string');
+      expect(block).to.have.property('type').to.be.a('string');
+      expect(block).to.have.property('content').to.be.an('object');
+      expect(block).to.have.property('order').to.be.a('number');
+    });
+  });
+}
+
+docs {
+  # Replace All Blocks
+  Replace all blocks in a note with a new set of blocks. This is useful for bulk content updates.
+
+  ## Authentication
+  Required: Bearer token (JWT)
+
+  ## Path Parameters
+  - **id** (required): The ID of the note
+
+  ## Request Body
+  ```json
+  {
+    "blocks": [
+      {
+        "id": "block-1",
+        "type": "heading_1",
+        "content": {
+          "rich_text": [
+            {
+              "text": "Heading Text",
+              "style": {
+                "bold": true,
+                "italic": false,
+                "underline": false,
+                "strikethrough": false,
+                "code": false,
+                "link": "",
+                "color": "",
+                "background": ""
+              }
+            }
+          ]
+        },
+        "order": 0
+      }
+    ]
+  }
+  ```
+
+  ## Block Types
+  - **paragraph**: Regular text block
+  - **heading_1** through **heading_6**: Heading levels
+  - **bullet_list**: Unordered list item
+  - **numbered_list**: Ordered list item
+  - **checkbox**: Checkbox with checked status
+  - **quote**: Block quote
+  - **code**: Code block with language syntax highlighting
+  - **divider**: Horizontal divider
+
+  ## Field Specifications
+  - **id** (required): Unique block identifier (UUID v4)
+  - **type** (required): Block type from list above
+  - **content** (required): Block content structure
+  - **order** (required): Position in note (0-based)
+
+  ## Content Structure by Type
+
+  ### Text Blocks (paragraph, heading_*, quote)
+  ```json
+  {
+    "rich_text": [
+      {
+        "text": "Text content",
+        "style": {
+          "bold": false,
+          "italic": false,
+          "underline": false,
+          "strikethrough": false,
+          "code": false,
+          "link": "",
+          "color": "",
+          "background": ""
+        }
+      }
+    ]
+  }
+  ```
+
+  ### List Blocks (bullet_list, numbered_list)
+  ```json
+  {
+    "rich_text": [
+      {
+        "text": "List item",
+        "style": null
+      }
+    ],
+    "children": []
+  }
+  ```
+
+  ### Checkbox Block
+  ```json
+  {
+    "checked": false,
+    "rich_text": [
+      {
+        "text": "Checkbox label",
+        "style": null
+      }
+    ]
+  }
+  ```
+
+  ### Code Block
+  ```json
+  {
+    "language": "javascript",
+    "code": "const x = 42;"
+  }
+  ```
+
+  ### Divider Block
+  ```json
+  {}
+  ```
+
+  ## Response Format
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": 1,
+      "user_id": 1,
+      "parent_id": null,
+      "title": "Meeting Notes",
+      "blocks": [
+        {
+          "id": "block-1",
+          "type": "heading_1",
+          "content": { ... },
+          "order": 0
+        }
+      ],
+      "is_archived": false,
+      "is_deleted": false,
+      "created_at": "2025-12-30T10:00:00Z",
+      "updated_at": "2025-12-30T13:30:00Z"
+    }
+  }
+  ```
+
+  ## Validation Rules
+  - All blocks must have unique IDs
+  - Block types must be valid
+  - Content must match block type requirements
+  - Order values should be sequential
+
+  ## Error Responses
+
+  ### 400 Bad Request - Invalid Block Type
+  ```json
+  {
+    "error": "invalid block type"
+  }
+  ```
+
+  ### 400 Bad Request - Invalid Block Content
+  ```json
+  {
+    "error": "block content is required"
+  }
+  ```
+
+  ### 404 Not Found
+  ```json
+  {
+    "error": "note not found"
+  }
+  ```
+
+  ## Status Codes
+  - **200 OK**: Blocks successfully replaced
+  - **400 Bad Request**: Invalid request body or validation error
+  - **401 Unauthorized**: Missing or invalid authentication
+  - **403 Forbidden**: Access denied to note
+  - **404 Not Found**: Note not found
+  - **500 Internal Server Error**: Server error
+
+  ## Related Endpoints
+  - POST /api/v1/notes/:id/blocks - Add single block
+  - PATCH /api/v1/notes/:id/blocks/:block_id - Update block
+  - DELETE /api/v1/notes/:id/blocks/:block_id - Delete block
+  - POST /api/v1/notes/:id/blocks/reorder - Reorder blocks
+}

@@ -1,0 +1,183 @@
+meta {
+  name: Reorder Blocks
+  type: http
+  seq: 17
+}
+
+post {
+  url: {{baseUrl}}/api/v1/notes/1/blocks/reorder
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "block_ids": [
+      "block-3",
+      "block-1",
+      "block-2"
+    ]
+  }
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Response has success flag", function() {
+    expect(res.body).to.have.property('success');
+    expect(res.body.success).to.be.true;
+  });
+
+  test("Blocks are reordered correctly", function() {
+    const blocks = res.body.data.blocks;
+    expect(blocks[0].id).to.equal('block-3');
+    expect(blocks[1].id).to.equal('block-1');
+    expect(blocks[2].id).to.equal('block-2');
+  });
+
+  test("Block order values are sequential", function() {
+    const blocks = res.body.data.blocks;
+    blocks.forEach((block, index) => {
+      expect(block.order).to.equal(index);
+    });
+  });
+
+  test("Note updated_at timestamp changed", function() {
+    const note = res.body.data;
+    expect(note).to.have.property('updated_at').to.be.a('string');
+  });
+}
+
+docs {
+  # Reorder Blocks
+  Change the order of blocks within a note by providing an ordered array of block IDs.
+
+  ## Authentication
+  Required: Bearer token (JWT)
+
+  ## Path Parameters
+  - **id** (required): The ID of the note
+
+  ## Request Body
+  ```json
+  {
+    "block_ids": [
+      "block-3",
+      "block-1",
+      "block-2",
+      "block-4"
+    ]
+  }
+  ```
+
+  ### Field Specifications
+  - **block_ids** (required): Array of block IDs in desired order. Must include all blocks or subset for reordering.
+
+  ## Response Format
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": 1,
+      "user_id": 1,
+      "title": "Meeting Notes",
+      "blocks": [
+        {
+          "id": "block-3",
+          "type": "paragraph",
+          "content": { ... },
+          "order": 0
+        },
+        {
+          "id": "block-1",
+          "type": "heading_1",
+          "content": { ... },
+          "order": 1
+        },
+        {
+          "id": "block-2",
+          "type": "paragraph",
+          "content": { ... },
+          "order": 2
+        }
+      ],
+      "is_archived": false,
+      "is_deleted": false,
+      "created_at": "2025-12-30T10:00:00Z",
+      "updated_at": "2025-12-30T14:30:00Z"
+    }
+  }
+  ```
+
+  ## Behavior
+  - Blocks are reordered according to the provided block_ids array
+  - Order values are auto-assigned based on position in array
+  - Block content remains unchanged
+  - Note updated_at timestamp updated
+  - Array must contain valid, existing block IDs
+
+  ## Order Validation
+  - All block IDs must exist in the note
+  - No duplicate IDs allowed
+  - Order values will be automatically recalculated (0, 1, 2, ...)
+
+  ## Error Responses
+
+  ### 400 Bad Request - Invalid Block Order
+  ```json
+  {
+    "error": "invalid block order"
+  }
+  ```
+
+  ### 400 Bad Request - Missing Block IDs
+  ```json
+  {
+    "error": "invalid block order"
+  }
+  ```
+
+  ### 404 Not Found - Note Not Found
+  ```json
+  {
+    "error": "note not found"
+  }
+  ```
+
+  ### 403 Forbidden
+  ```json
+  {
+    "error": "access denied"
+  }
+  ```
+
+  ## Status Codes
+  - **200 OK**: Blocks successfully reordered
+  - **400 Bad Request**: Invalid block order or missing blocks
+  - **401 Unauthorized**: Missing or invalid authentication
+  - **403 Forbidden**: Access denied to note
+  - **404 Not Found**: Note not found
+  - **500 Internal Server Error**: Server error
+
+  ## Use Cases
+  - Drag-and-drop block reordering in UI
+  - Moving blocks up/down
+  - Reorganizing note content
+  - Restoring previous block order from backup
+
+  ## Related Endpoints
+  - POST /api/v1/notes/:id/blocks - Add new block
+  - PATCH /api/v1/notes/:id/blocks/:block_id - Update block
+  - DELETE /api/v1/notes/:id/blocks/:block_id - Delete block
+  - PUT /api/v1/notes/:id/blocks - Replace all blocks
+}

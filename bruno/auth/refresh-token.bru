@@ -1,0 +1,125 @@
+meta {
+  name: Refresh Token
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/refresh
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.Xl7pREm8DIGjSgHUwBP8nBxqKn1pPEPsGAFHwHG3l2c"
+  }
+}
+
+tests {
+  test("Status is 200 OK", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Response has success flag", function() {
+    expect(res.getBody().success).to.equal(true);
+  });
+
+  test("Response contains new access token", function() {
+    const body = res.getBody();
+    expect(body.data).to.exist;
+    expect(body.data.access_token).to.be.a("string");
+    expect(body.data.access_token.length).to.be.above(0);
+  });
+
+  test("Response contains new refresh token", function() {
+    const body = res.getBody();
+    expect(body.data.refresh_token).to.be.a("string");
+    expect(body.data.refresh_token.length).to.be.above(0);
+  });
+
+  test("New access token is different from old", function() {
+    const body = res.getBody();
+    expect(body.data.access_token).to.not.equal("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.Xl7pREm8DIGjSgHUwBP8nBxqKn1pPEPsGAFHwHG3l2c");
+  });
+
+  test("Token type is Bearer", function() {
+    const body = res.getBody();
+    expect(body.data.token_type).to.equal("Bearer");
+  });
+
+  test("Expiration time is correct", function() {
+    const body = res.getBody();
+    expect(body.data.expires_in).to.equal(86400);
+  });
+}
+
+docs {
+  # Refresh Token
+
+  ## Description
+  Obtain a new access token using a valid refresh token. Use this when your access token expires but your refresh token is still valid.
+
+  ## Authentication
+  None required (public endpoint)
+
+  ## Request Body
+  - **refresh_token** (string, required): The refresh token received during login or previous token refresh
+
+  ## Response (200 OK)
+  ```json
+  {
+    "success": true,
+    "data": {
+      "user": {
+        "id": 1,
+        "email": "john.doe@example.com",
+        "name": "John Doe",
+        "provider": "email",
+        "avatar_url": "",
+        "is_active": true,
+        "created_at": "2026-01-03T10:00:00Z"
+      },
+      "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+      "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+      "token_type": "Bearer",
+      "expires_in": 86400
+    }
+  }
+  ```
+
+  ## Token Expiration Timeline
+  - **Access Token**: 24 hours (86400 seconds)
+  - **Refresh Token**: 7 days
+  - Call this endpoint before access token expires to maintain session
+
+  ## Best Practice Flow
+  1. User logs in, receives access_token and refresh_token
+  2. Use access_token for all protected API requests
+  3. When access_token expires (catch 401 Unauthorized):
+     - Call /api/v1/auth/refresh with refresh_token
+     - Update stored access_token with new token
+     - Retry original request with new token
+  4. If refresh_token also expired:
+     - Redirect user to login page
+
+  ## Error Responses
+  - **400 Bad Request**: Invalid request format
+  - **401 Unauthorized**: Invalid or expired refresh token
+  - **500 Internal Server Error**: Server error during token generation
+
+  ## Example cURL
+  ```bash
+  curl -X POST http://localhost:8080/api/v1/auth/refresh \
+    -H "Content-Type: application/json" \
+    -d '{
+      "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    }'
+  ```
+
+  ## Security Notes
+  - Never expose refresh tokens to client-side JavaScript in browser
+  - Store refresh tokens securely (HttpOnly cookies recommended)
+  - Refresh tokens should be rotated after each use for enhanced security
+  - Consider token blacklisting for logout functionality
+}

@@ -1,0 +1,128 @@
+meta {
+  name: Search Notes
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/v1/notes/search
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+query {
+  q: meeting
+  page: 1
+  limit: 20
+}
+
+headers {
+  Content-Type: application/json
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Response has success flag", function() {
+    expect(res.body).to.have.property('success');
+    expect(res.body.success).to.be.true;
+  });
+
+  test("Response has data with notes and pagination", function() {
+    expect(res.body).to.have.property('data');
+    expect(res.body.data).to.have.property('notes').to.be.an('array');
+    expect(res.body.data).to.have.property('pagination').to.be.an('object');
+  });
+
+  test("Pagination has correct structure", function() {
+    const pagination = res.body.data.pagination;
+    expect(pagination).to.have.property('page').to.equal(1);
+    expect(pagination).to.have.property('limit');
+    expect(pagination).to.have.property('total');
+    expect(pagination).to.have.property('total_pages');
+  });
+
+  test("Search results contain query term in title", function() {
+    const notes = res.body.data.notes;
+    if (notes.length > 0) {
+      const titleLower = notes[0].title.toLowerCase();
+      expect(titleLower).to.include('meeting');
+    }
+  });
+}
+
+docs {
+  # Search Notes
+  Search notes by query text. Searches across note titles and content.
+
+  ## Authentication
+  Required: Bearer token (JWT)
+
+  ## Query Parameters
+  - **q** (required): Search query string (minimum 1 character)
+  - **page** (optional, default: 1): Page number for pagination
+  - **limit** (optional, default: 20, max: 100): Results per page
+
+  ## Response Format
+  ```json
+  {
+    "success": true,
+    "data": {
+      "notes": [
+        {
+          "id": 1,
+          "user_id": 1,
+          "parent_id": null,
+          "title": "Meeting Notes - Q1 Planning",
+          "icon": "📝",
+          "cover_image": "",
+          "blocks": [],
+          "view_metadata": null,
+          "properties": {},
+          "path": "/1",
+          "depth": 0,
+          "position": 0,
+          "is_archived": false,
+          "is_deleted": false,
+          "created_at": "2025-12-30T10:00:00Z",
+          "updated_at": "2025-12-30T11:00:00Z"
+        }
+      ],
+      "pagination": {
+        "page": 1,
+        "limit": 20,
+        "total": 5,
+        "total_pages": 1
+      }
+    }
+  }
+  ```
+
+  ## Search Behavior
+  - Case-insensitive search
+  - Searches note titles and block content
+  - Excludes deleted notes from results
+  - Includes archived notes in search results (use separate archived filter if needed)
+  - Results ordered by relevance and recency
+
+  ## Error Responses
+
+  ### 400 Bad Request - Missing Query
+  ```json
+  {
+    "error": "search query is required"
+  }
+  ```
+
+  ## Status Codes
+  - **200 OK**: Search completed successfully
+  - **400 Bad Request**: Missing search query or invalid parameters
+  - **401 Unauthorized**: Missing or invalid authentication
+  - **500 Internal Server Error**: Server error
+}

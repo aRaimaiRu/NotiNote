@@ -1,0 +1,136 @@
+meta {
+  name: List Notes
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/notes
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+query {
+  page: 1
+  limit: 20
+  parent_id:
+  archived: false
+  search:
+  sort_by: updated_at
+  sort_order: desc
+}
+
+headers {
+  Content-Type: application/json
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Response has success flag", function() {
+    expect(res.body).to.have.property('success');
+    expect(res.body.success).to.be.true;
+  });
+
+  test("Response has data object", function() {
+    expect(res.body).to.have.property('data');
+    expect(res.body.data).to.have.property('notes');
+    expect(res.body.data).to.have.property('pagination');
+  });
+
+  test("Notes array is present", function() {
+    expect(res.body.data.notes).to.be.an('array');
+  });
+
+  test("Pagination has required fields", function() {
+    const pagination = res.body.data.pagination;
+    expect(pagination).to.have.property('page').to.equal(1);
+    expect(pagination).to.have.property('limit');
+    expect(pagination).to.have.property('total');
+    expect(pagination).to.have.property('total_pages');
+  });
+
+  test("Note objects have required fields", function() {
+    if (res.body.data.notes.length > 0) {
+      const note = res.body.data.notes[0];
+      expect(note).to.have.property('id').to.be.a('number');
+      expect(note).to.have.property('user_id').to.be.a('number');
+      expect(note).to.have.property('title').to.be.a('string');
+      expect(note).to.have.property('is_archived').to.be.a('boolean');
+      expect(note).to.have.property('is_deleted').to.be.a('boolean');
+      expect(note).to.have.property('created_at').to.be.a('string');
+      expect(note).to.have.property('updated_at').to.be.a('string');
+    }
+  });
+}
+
+docs {
+  # List Notes
+  Retrieve all notes for the authenticated user with pagination, filtering, and sorting.
+
+  ## Authentication
+  Required: Bearer token (JWT)
+
+  ## Query Parameters
+  - **page** (optional, default: 1): Page number for pagination
+  - **limit** (optional, default: 20, max: 100): Number of notes per page
+  - **parent_id** (optional): Filter by parent note ID
+  - **archived** (optional): Filter by archived status (true/false)
+  - **search** (optional): Search query to filter notes by title/content
+  - **sort_by** (optional, default: updated_at): Sort field (created_at, updated_at, title)
+  - **sort_order** (optional, default: desc): Sort direction (asc, desc)
+
+  ## Response Format
+  ```json
+  {
+    "success": true,
+    "data": {
+      "notes": [
+        {
+          "id": 1,
+          "user_id": 1,
+          "parent_id": null,
+          "title": "Meeting Notes",
+          "icon": "📝",
+          "cover_image": "https://...",
+          "blocks": [],
+          "view_metadata": null,
+          "properties": {},
+          "path": "/1",
+          "depth": 0,
+          "position": 0,
+          "is_archived": false,
+          "is_deleted": false,
+          "created_at": "2025-12-30T10:00:00Z",
+          "updated_at": "2025-12-30T11:00:00Z"
+        }
+      ],
+      "pagination": {
+        "page": 1,
+        "limit": 20,
+        "total": 45,
+        "total_pages": 3
+      }
+    }
+  }
+  ```
+
+  ## Examples
+  - Get first 20 notes: `GET /api/v1/notes?page=1&limit=20`
+  - Search notes: `GET /api/v1/notes?search=meeting&page=1`
+  - Get archived notes: `GET /api/v1/notes?archived=true`
+  - Get children of note 5: `GET /api/v1/notes?parent_id=5`
+  - Sort by creation date: `GET /api/v1/notes?sort_by=created_at&sort_order=asc`
+
+  ## Status Codes
+  - **200 OK**: Successfully retrieved notes
+  - **400 Bad Request**: Invalid query parameters
+  - **401 Unauthorized**: Missing or invalid authentication
+  - **500 Internal Server Error**: Server error
+}

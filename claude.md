@@ -5,10 +5,14 @@
 **NotiNoteApp** is a full-featured note-taking application with intelligent notification capabilities, supporting both mobile and web platforms. The backend is built with Golang, providing a RESTful API with real-time notification delivery.
 
 ### Key Features
-- Multi-user support with email/password authentication
-- CRUD operations for notes
-- Scheduled notifications for notes
-- Real-time notifications via WebSocket (web) and FCM (mobile)
+- Multi-user support with email/password and OAuth authentication (Google, Facebook)
+- **Notion-like note-taking system** (IN PROGRESS - see `IMPLEMENTATION_STATUS.md`)
+  - Block-based editor with rich text formatting
+  - Nested page hierarchy with materialized path
+  - Database views (table, board, list) with custom properties
+  - Note sharing with granular permissions
+- Scheduled notifications for notes (PLANNED)
+- Real-time notifications via WebSocket (web) and FCM (mobile) (PLANNED)
 - Cross-platform support (iOS, Android, Web)
 
 ---

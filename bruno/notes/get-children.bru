@@ -1,0 +1,138 @@
+meta {
+  name: Get Children
+  type: http
+  seq: 11
+}
+
+get {
+  url: {{baseUrl}}/api/v1/notes/1/children
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Response has success flag", function() {
+    expect(res.body).to.have.property('success');
+    expect(res.body.success).to.be.true;
+  });
+
+  test("Response has data array", function() {
+    expect(res.body).to.have.property('data').to.be.an('array');
+  });
+
+  test("Child notes have correct parent_id", function() {
+    const children = res.body.data;
+    if (children.length > 0) {
+      const child = children[0];
+      expect(child).to.have.property('parent_id').to.equal(1);
+    }
+  });
+
+  test("Child notes have summary fields", function() {
+    const children = res.body.data;
+    if (children.length > 0) {
+      const child = children[0];
+      expect(child).to.have.property('id').to.be.a('number');
+      expect(child).to.have.property('title').to.be.a('string');
+      expect(child).to.have.property('depth').to.be.a('number');
+      expect(child).to.have.property('is_archived').to.be.a('boolean');
+    }
+  });
+}
+
+docs {
+  # Get Children
+  Retrieve all direct child notes of a given note (immediate children only, not recursive).
+
+  ## Authentication
+  Required: Bearer token (JWT)
+
+  ## Path Parameters
+  - **id** (required): The ID of the parent note
+
+  ## Response Format
+  ```json
+  {
+    "success": true,
+    "data": [
+      {
+        "id": 2,
+        "title": "Child Note 1",
+        "icon": "📄",
+        "parent_id": 1,
+        "depth": 1,
+        "is_archived": false,
+        "created_at": "2025-12-30T11:00:00Z",
+        "updated_at": "2025-12-30T11:00:00Z"
+      },
+      {
+        "id": 3,
+        "title": "Child Note 2",
+        "icon": "📋",
+        "parent_id": 1,
+        "depth": 1,
+        "is_archived": false,
+        "created_at": "2025-12-30T11:30:00Z",
+        "updated_at": "2025-12-30T11:30:00Z"
+      }
+    ]
+  }
+  ```
+
+  ## Get Children Behavior
+  - Returns direct children only (depth = parent depth + 1)
+  - Ordered by position field (sibling order)
+  - Excludes deleted children
+  - Uses summary response format (fewer fields than full note)
+  - Returns empty array if no children
+
+  ## Response Fields
+  - **id**: Note ID
+  - **title**: Note title
+  - **icon**: Note emoji/icon
+  - **parent_id**: Parent note ID
+  - **depth**: Depth in hierarchy
+  - **is_archived**: Archive status
+  - **created_at**: Creation timestamp
+  - **updated_at**: Last update timestamp
+
+  ## Error Responses
+
+  ### 404 Not Found
+  ```json
+  {
+    "error": "note not found"
+  }
+  ```
+
+  ### 403 Forbidden
+  ```json
+  {
+    "error": "access denied"
+  }
+  ```
+
+  ## Status Codes
+  - **200 OK**: Successfully retrieved children
+  - **400 Bad Request**: Invalid note ID
+  - **401 Unauthorized**: Missing or invalid authentication
+  - **403 Forbidden**: Access denied to note
+  - **404 Not Found**: Note not found
+  - **500 Internal Server Error**: Server error
+
+  ## Related Endpoints
+  - GET /api/v1/notes/:id/ancestors - Get parent notes (breadcrumb)
+  - GET /api/v1/notes?parent_id=:id - Get children with pagination
+}

@@ -1,0 +1,151 @@
+meta {
+  name: Update Note
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/api/v1/notes/5
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "title": "Updated Meeting Notes",
+    "icon": "📌",
+    "cover_image": ""
+  }
+}
+
+vars:pre-request {
+  baseUrl: http://localhost:8080
+  authToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJlbWFpbCI6ImZpcnN0MTgwMTFAZ21haWwuY29tIiwiaXNzIjoibm90aW5vdGVhcHAiLCJleHAiOjE3Njc2MTQ5NjAsIm5iZiI6MTc2NzUyODU2MCwiaWF0IjoxNzY3NTI4NTYwfQ.ADi4eaEziJH2VsnMW0JUxpgPUyzQ8xk1iKL4Ebfr-AU
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Response has success flag", function() {
+    expect(res.body).to.have.property('success');
+    expect(res.body.success).to.be.true;
+  });
+  
+  test("Updated fields are reflected in response", function() {
+    const note = res.body.data;
+    expect(note).to.have.property('title').to.equal('Updated Meeting Notes');
+    expect(note).to.have.property('icon').to.equal('📌');
+    expect(note).to.have.property('cover_image').to.equal('https://example.com/cover.jpg');
+  });
+  
+  test("Other fields remain unchanged", function() {
+    const note = res.body.data;
+    expect(note).to.have.property('id').to.equal(1);
+    expect(note).to.have.property('user_id').to.be.a('number');
+    expect(note).to.have.property('created_at').to.be.a('string');
+  });
+  
+  test("Updated timestamp is current", function() {
+    const note = res.body.data;
+    expect(note).to.have.property('updated_at').to.be.a('string');
+    const updatedAt = new Date(note.updated_at);
+    expect(updatedAt.getTime()).to.be.greaterThan(0);
+  });
+}
+
+docs {
+  # Update Note
+  Update a note's metadata (title, icon, cover image). This does not modify the note's blocks or content.
+  
+  ## Authentication
+  Required: Bearer token (JWT)
+  
+  ## Path Parameters
+  - **id** (required): The ID of the note to update
+  
+  ## Request Body
+  All fields are optional. Only provided fields will be updated.
+  
+  ```json
+  {
+    "title": "Updated Title",
+    "icon": "📌",
+    "cover_image": "https://example.com/cover.jpg"
+  }
+  ```
+  
+  ### Field Specifications
+  - **title** (optional): Note title (1-500 characters if provided)
+  - **icon** (optional): Emoji or icon identifier
+  - **cover_image** (optional): URL to cover image
+  
+  ## Response Format
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": 1,
+      "user_id": 1,
+      "parent_id": null,
+      "title": "Updated Meeting Notes",
+      "icon": "📌",
+      "cover_image": "https://example.com/cover.jpg",
+      "blocks": [],
+      "view_metadata": null,
+      "properties": {},
+      "path": "/1",
+      "depth": 0,
+      "position": 0,
+      "is_archived": false,
+      "is_deleted": false,
+      "created_at": "2025-12-30T10:00:00Z",
+      "updated_at": "2025-12-30T12:30:00Z"
+    }
+  }
+  ```
+  
+  ## Validation Rules
+  - Title: If provided, must be 1-500 characters
+  - All fields are optional; send only what needs updating
+  
+  ## Error Responses
+  
+  ### 400 Bad Request - Invalid Title
+  ```json
+  {
+    "error": "invalid title"
+  }
+  ```
+  
+  ### 404 Not Found
+  ```json
+  {
+    "error": "note not found"
+  }
+  ```
+  
+  ### 403 Forbidden
+  ```json
+  {
+    "error": "access denied"
+  }
+  ```
+  
+  ## Status Codes
+  - **200 OK**: Note successfully updated
+  - **400 Bad Request**: Invalid request body or validation error
+  - **401 Unauthorized**: Missing or invalid authentication
+  - **403 Forbidden**: Access denied to note
+  - **404 Not Found**: Note not found
+  - **500 Internal Server Error**: Server error
+}

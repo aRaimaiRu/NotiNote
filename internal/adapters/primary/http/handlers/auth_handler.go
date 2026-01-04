@@ -148,6 +148,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 func (h *AuthHandler) GetCurrentUser(c *gin.Context) {
 	// Get user ID from context (set by auth middleware)
 	userID, exists := c.Get("user_id")
+	fmt.Println("userID", userID)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
 			Success: false,

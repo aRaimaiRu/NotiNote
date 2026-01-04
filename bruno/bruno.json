@@ -1,0 +1,38 @@
+{
+  "version": "1",
+  "name": "NotiNoteApp API",
+  "uid": "a3e5f2c8-9d1b-4a6c-8e2f-7c9a3b1d5e7f",
+  "root": "bruno",
+  "type": "collection",
+  "environments": [
+    "local",
+    "development",
+    "production"
+  ],
+  "settings": {
+    "auth": {
+      "mode": "bearer",
+      "bearer": "{{authToken}}"
+    },
+    "headers": [
+      {
+        "key": "Content-Type",
+        "value": "application/json"
+      }
+    ],
+    "vars": {
+      "baseUrl": "http://localhost:8080",
+      "authToken": ""
+    },
+    "request": {
+      "timeout": 30000,
+      "followRedirects": true
+    }
+  },
+  "docs": {
+    "title": "NotiNoteApp API Documentation",
+    "description": "Complete API reference for NotiNoteApp backend including authentication and notes system.",
+    "version": "1.1.0",
+    "overview": "NotiNoteApp is a full-featured note-taking application with intelligent notification capabilities. This collection documents all implemented API endpoints: Phase 0 (Authentication System) + Phase 1 (Notes System with 19 endpoints)."
+  }
+}

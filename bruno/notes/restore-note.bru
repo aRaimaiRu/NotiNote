@@ -1,0 +1,110 @@
+meta {
+  name: Restore Note
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/api/v1/notes/1/restore
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Response has success flag", function() {
+    expect(res.body).to.have.property('success');
+    expect(res.body.success).to.be.true;
+  });
+
+  test("Note is marked as not deleted", function() {
+    const note = res.body.data;
+    expect(note).to.have.property('is_deleted').to.equal(false);
+  });
+
+  test("Updated timestamp changed", function() {
+    const note = res.body.data;
+    expect(note).to.have.property('updated_at').to.be.a('string');
+  });
+}
+
+docs {
+  # Restore Note
+  Restore a soft-deleted note to make it active again.
+
+  ## Authentication
+  Required: Bearer token (JWT)
+
+  ## Path Parameters
+  - **id** (required): The ID of the soft-deleted note to restore
+
+  ## Response Format
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": 1,
+      "user_id": 1,
+      "parent_id": null,
+      "title": "Meeting Notes",
+      "icon": "📝",
+      "cover_image": "",
+      "blocks": [],
+      "view_metadata": null,
+      "properties": {},
+      "path": "/1",
+      "depth": 0,
+      "position": 0,
+      "is_archived": false,
+      "is_deleted": false,
+      "created_at": "2025-12-30T10:00:00Z",
+      "updated_at": "2025-12-30T13:00:00Z"
+    }
+  }
+  ```
+
+  ## Restore Behavior
+  - Sets `is_deleted: false` flag
+  - Makes soft-deleted note visible again
+  - Restores all child notes as well
+  - Preserves all note content and metadata
+  - Can only restore notes deleted via soft delete (DELETE endpoint)
+
+  ## Error Responses
+
+  ### 404 Not Found
+  ```json
+  {
+    "error": "note not found"
+  }
+  ```
+
+  ### 403 Forbidden
+  ```json
+  {
+    "error": "access denied"
+  }
+  ```
+
+  ## Status Codes
+  - **200 OK**: Note successfully restored
+  - **400 Bad Request**: Invalid note ID
+  - **401 Unauthorized**: Missing or invalid authentication
+  - **403 Forbidden**: Access denied to note
+  - **404 Not Found**: Note not found (or already deleted permanently)
+  - **500 Internal Server Error**: Server error
+
+  ## Related Endpoints
+  - DELETE /api/v1/notes/:id - Soft delete a note
+}

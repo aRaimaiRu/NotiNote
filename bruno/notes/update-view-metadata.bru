@@ -1,0 +1,291 @@
+meta {
+  name: Update View Metadata
+  type: http
+  seq: 18
+}
+
+put {
+  url: {{baseUrl}}/api/v1/notes/1/view
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "view_type": "table",
+    "properties": [
+      {
+        "id": "prop-1",
+        "name": "Status",
+        "type": "select",
+        "options": [
+          "Not Started",
+          "In Progress",
+          "Completed"
+        ],
+        "visible": true,
+        "width": 150,
+        "position": 0
+      },
+      {
+        "id": "prop-2",
+        "name": "Priority",
+        "type": "select",
+        "options": [
+          "Low",
+          "Medium",
+          "High"
+        ],
+        "visible": true,
+        "width": 120,
+        "position": 1
+      }
+    ],
+    "filters": [
+      {
+        "property_id": "prop-1",
+        "operator": "equals",
+        "value": "In Progress"
+      }
+    ],
+    "sorts": [
+      {
+        "property_id": "prop-2",
+        "direction": "desc"
+      }
+    ]
+  }
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Response has success flag", function() {
+    expect(res.body).to.have.property('success');
+    expect(res.body.success).to.be.true;
+  });
+
+  test("View metadata is updated", function() {
+    const note = res.body.data;
+    expect(note).to.have.property('view_metadata').to.not.be.null;
+    const view = note.view_metadata;
+    expect(view).to.have.property('view_type').to.equal('table');
+  });
+
+  test("Properties are set correctly", function() {
+    const view = res.body.data.view_metadata;
+    expect(view).to.have.property('properties').to.be.an('array');
+    expect(view.properties.length).to.equal(2);
+  });
+
+  test("Filters are applied", function() {
+    const view = res.body.data.view_metadata;
+    expect(view).to.have.property('filters').to.be.an('array');
+  });
+}
+
+docs {
+  # Update View Metadata
+  Configure database view settings for a note (table, board, gallery, list views). This enables Notion-like database functionality.
+
+  ## Authentication
+  Required: Bearer token (JWT)
+
+  ## Path Parameters
+  - **id** (required): The ID of the note
+
+  ## Request Body
+  ```json
+  {
+    "view_type": "table",
+    "properties": [
+      {
+        "id": "prop-1",
+        "name": "Status",
+        "type": "select",
+        "options": ["Option1", "Option2"],
+        "visible": true,
+        "width": 150,
+        "position": 0
+      }
+    ],
+    "filters": [
+      {
+        "property_id": "prop-1",
+        "operator": "equals",
+        "value": "Option1"
+      }
+    ],
+    "sorts": [
+      {
+        "property_id": "prop-1",
+        "direction": "asc"
+      }
+    ]
+  }
+  ```
+
+  ### Field Specifications
+
+  #### View Type
+  - **table**: Traditional table layout
+  - **board**: Kanban board view
+  - **list**: List layout
+  - **gallery**: Gallery/grid layout
+
+  #### Properties (Database Columns)
+  - **id**: Property identifier
+  - **name**: Display name
+  - **type**: Property type (see below)
+  - **options**: Array of select options (for select/multi_select types)
+  - **visible**: Show/hide column
+  - **width**: Column width in pixels
+  - **position**: Column order (0-based)
+
+  #### Property Types
+  - **text**: Text input
+  - **number**: Numeric value
+  - **select**: Single select dropdown
+  - **multi_select**: Multiple select
+  - **date**: Date picker
+  - **checkbox**: Boolean checkbox
+  - **url**: URL input
+  - **email**: Email input
+  - **person**: Person/user reference
+
+  #### Filters
+  - **property_id**: ID of property to filter
+  - **operator**: "equals", "contains", "is_empty", "is_not_empty", "greater_than", "less_than", etc.
+  - **value**: Filter value
+
+  #### Sorts
+  - **property_id**: ID of property to sort by
+  - **direction**: "asc" or "desc"
+
+  ## Response Format
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": 1,
+      "user_id": 1,
+      "title": "Project Tasks",
+      "blocks": [],
+      "view_metadata": {
+        "view_type": "table",
+        "properties": [
+          {
+            "id": "prop-1",
+            "name": "Status",
+            "type": "select",
+            "options": ["Not Started", "In Progress", "Completed"],
+            "visible": true,
+            "width": 150,
+            "position": 0
+          }
+        ],
+        "filters": [
+          {
+            "property_id": "prop-1",
+            "operator": "equals",
+            "value": "In Progress"
+          }
+        ],
+        "sorts": [
+          {
+            "property_id": "prop-1",
+            "direction": "desc"
+          }
+        ]
+      },
+      "is_archived": false,
+      "is_deleted": false,
+      "created_at": "2025-12-30T10:00:00Z",
+      "updated_at": "2025-12-30T14:45:00Z"
+    }
+  }
+  ```
+
+  ## Use Cases
+  - Create task management database (with Status, Priority, Due Date properties)
+  - Product roadmap (with Category, Stage properties)
+  - Content calendar (with Author, Status, Date properties)
+  - CRM database (with Lead Status, Company, Email properties)
+
+  ## Example: Task Database
+  ```json
+  {
+    "view_type": "table",
+    "properties": [
+      {
+        "id": "status",
+        "name": "Status",
+        "type": "select",
+        "options": ["Todo", "In Progress", "Done"],
+        "visible": true,
+        "position": 0
+      },
+      {
+        "id": "priority",
+        "name": "Priority",
+        "type": "select",
+        "options": ["Low", "Medium", "High"],
+        "visible": true,
+        "position": 1
+      },
+      {
+        "id": "due_date",
+        "name": "Due Date",
+        "type": "date",
+        "visible": true,
+        "position": 2
+      }
+    ]
+  }
+  ```
+
+  ## Error Responses
+
+  ### 400 Bad Request - Invalid View Type
+  ```json
+  {
+    "error": "invalid view type"
+  }
+  ```
+
+  ### 404 Not Found
+  ```json
+  {
+    "error": "note not found"
+  }
+  ```
+
+  ### 403 Forbidden
+  ```json
+  {
+    "error": "access denied"
+  }
+  ```
+
+  ## Status Codes
+  - **200 OK**: View metadata successfully updated
+  - **400 Bad Request**: Invalid view type or property configuration
+  - **401 Unauthorized**: Missing or invalid authentication
+  - **403 Forbidden**: Access denied to note
+  - **404 Not Found**: Note not found
+  - **500 Internal Server Error**: Server error
+
+  ## Related Endpoints
+  - PUT /api/v1/notes/:id/properties - Update custom properties
+  - GET /api/v1/notes/:id - Get note with view metadata
+}

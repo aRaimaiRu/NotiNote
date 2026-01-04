@@ -1,0 +1,132 @@
+meta {
+  name: User Registration
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/register
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "john.doe@example.com",
+    "password": "SecurePass123!",
+    "name": "John Doe"
+  }
+}
+
+tests {
+  test("Status is 201 Created", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+
+  test("Response has success flag", function() {
+    expect(res.getBody().success).to.equal(true);
+  });
+
+  test("Response contains user data", function() {
+    const body = res.getBody();
+    expect(body.data).to.exist;
+    expect(body.data.user).to.exist;
+    expect(body.data.user.email).to.equal("john.doe@example.com");
+    expect(body.data.user.name).to.equal("John Doe");
+  });
+
+  test("Response contains access token", function() {
+    const body = res.getBody();
+    expect(body.data.access_token).to.be.a("string");
+    expect(body.data.access_token.length).to.be.above(0);
+  });
+
+  test("Response contains refresh token", function() {
+    const body = res.getBody();
+    expect(body.data.refresh_token).to.be.a("string");
+    expect(body.data.refresh_token.length).to.be.above(0);
+  });
+
+  test("Response contains token type", function() {
+    const body = res.getBody();
+    expect(body.data.token_type).to.equal("Bearer");
+  });
+
+  test("Response contains expiration time", function() {
+    const body = res.getBody();
+    expect(body.data.expires_in).to.equal(86400);
+  });
+
+  test("User has correct provider", function() {
+    const body = res.getBody();
+    expect(body.data.user.provider).to.equal("email");
+  });
+
+  test("User is active", function() {
+    const body = res.getBody();
+    expect(body.data.user.is_active).to.equal(true);
+  });
+}
+
+docs {
+  # User Registration
+
+  ## Description
+  Register a new user account with email and password authentication.
+
+  ## Authentication
+  None required (public endpoint)
+
+  ## Request Body
+  - **email** (string, required): User email address (must be valid email format)
+  - **password** (string, required): User password (minimum 8 characters, must contain uppercase, lowercase, number, and special character)
+  - **name** (string, required): User display name (1-255 characters)
+
+  ## Response (201 Created)
+  ```json
+  {
+    "success": true,
+    "data": {
+      "user": {
+        "id": 1,
+        "email": "john.doe@example.com",
+        "name": "John Doe",
+        "provider": "email",
+        "avatar_url": "",
+        "is_active": true,
+        "created_at": "2026-01-03T10:00:00Z"
+      },
+      "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+      "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+      "token_type": "Bearer",
+      "expires_in": 86400
+    }
+  }
+  ```
+
+  ## Validation Rules
+  - Email must be unique (returns 409 Conflict if email exists)
+  - Email format: valid@example.com
+  - Password minimum 8 characters
+  - Password must contain at least one uppercase letter
+  - Password must contain at least one lowercase letter
+  - Password must contain at least one number
+  - Password must contain at least one special character (!@#$%^&*(),.?":{}|<>)
+  - Name between 1-255 characters
+
+  ## Error Responses
+  - **400 Bad Request**: Invalid input format or validation failure
+  - **409 Conflict**: Email already registered
+  - **500 Internal Server Error**: Server error during registration
+
+  ## Example cURL
+  ```bash
+  curl -X POST http://localhost:8080/api/v1/auth/register \
+    -H "Content-Type: application/json" \
+    -d '{
+      "email": "john.doe@example.com",
+      "password": "SecurePass123!",
+      "name": "John Doe"
+    }'
+  ```
+}

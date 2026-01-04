@@ -13,6 +13,7 @@ import (
 // RouterConfig holds router configuration
 type RouterConfig struct {
 	AuthHandler *handlers.AuthHandler
+	NoteHandler *handlers.NoteHandler
 	Config      *config.Config
 }
 
@@ -68,15 +69,40 @@ func SetupRouter(cfg RouterConfig) *gin.Engine {
 			// User routes
 			protected.GET("/me", cfg.AuthHandler.GetCurrentUser)
 
-			// Notes routes (placeholder for future implementation)
-			// notes := protected.Group("/notes")
-			// {
-			// 	notes.GET("", noteHandler.List)
-			// 	notes.POST("", noteHandler.Create)
-			// 	notes.GET("/:id", noteHandler.Get)
-			// 	notes.PUT("/:id", noteHandler.Update)
-			// 	notes.DELETE("/:id", noteHandler.Delete)
-			// }
+			// Notes routes
+			if cfg.NoteHandler != nil {
+				notes := protected.Group("/notes")
+				{
+					// Basic CRUD operations
+					notes.GET("", cfg.NoteHandler.ListNotes)
+					notes.POST("", cfg.NoteHandler.CreateNote)
+					notes.GET("/search", cfg.NoteHandler.SearchNotes)
+					notes.GET("/:id", cfg.NoteHandler.GetNote)
+					notes.PUT("/:id", cfg.NoteHandler.UpdateNote)
+					notes.DELETE("/:id", cfg.NoteHandler.DeleteNote)
+
+					// Note lifecycle operations
+					notes.POST("/:id/archive", cfg.NoteHandler.ArchiveNote)
+					notes.POST("/:id/unarchive", cfg.NoteHandler.UnarchiveNote)
+					notes.POST("/:id/restore", cfg.NoteHandler.RestoreNote)
+					notes.POST("/:id/move", cfg.NoteHandler.MoveNote)
+
+					// Hierarchy operations
+					notes.GET("/:id/children", cfg.NoteHandler.GetChildren)
+					notes.GET("/:id/ancestors", cfg.NoteHandler.GetAncestors)
+
+					// Block operations
+					notes.PUT("/:id/blocks", cfg.NoteHandler.ReplaceBlocks)
+					notes.POST("/:id/blocks", cfg.NoteHandler.AddBlock)
+					notes.PATCH("/:id/blocks/:block_id", cfg.NoteHandler.UpdateBlock)
+					notes.DELETE("/:id/blocks/:block_id", cfg.NoteHandler.DeleteBlock)
+					notes.POST("/:id/blocks/reorder", cfg.NoteHandler.ReorderBlocks)
+
+					// View and properties
+					notes.PUT("/:id/view", cfg.NoteHandler.UpdateViewMetadata)
+					notes.PUT("/:id/properties", cfg.NoteHandler.UpdateProperties)
+				}
+			}
 
 			// Notifications routes (placeholder for future implementation)
 			// notifications := protected.Group("/notifications")

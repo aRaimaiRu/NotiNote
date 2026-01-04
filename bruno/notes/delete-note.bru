@@ -1,0 +1,89 @@
+meta {
+  name: Delete Note (Soft Delete)
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/notes/1
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Response has success flag", function() {
+    expect(res.body).to.have.property('success');
+    expect(res.body.success).to.be.true;
+  });
+
+  test("Response has success message", function() {
+    expect(res.body).to.have.property('message');
+    expect(res.body.message).to.equal('note deleted successfully');
+  });
+}
+
+docs {
+  # Delete Note (Soft Delete)
+  Soft delete a note (mark as deleted without permanently removing from database). Deleted notes can be restored using the /restore endpoint.
+
+  ## Authentication
+  Required: Bearer token (JWT)
+
+  ## Path Parameters
+  - **id** (required): The ID of the note to delete
+
+  ## Response Format
+  ```json
+  {
+    "success": true,
+    "message": "note deleted successfully"
+  }
+  ```
+
+  ## Soft Delete Behavior
+  - Note is marked with `is_deleted: true` flag
+  - Note remains in database for historical tracking
+  - Note can be restored using POST /api/v1/notes/:id/restore
+  - Soft-deleted notes are excluded from list queries by default
+  - All child notes are also soft-deleted
+
+  ## Error Responses
+
+  ### 404 Not Found
+  ```json
+  {
+    "error": "note not found"
+  }
+  ```
+
+  ### 403 Forbidden
+  ```json
+  {
+    "error": "access denied"
+  }
+  ```
+
+  ## Status Codes
+  - **200 OK**: Note successfully deleted
+  - **400 Bad Request**: Invalid note ID
+  - **401 Unauthorized**: Missing or invalid authentication
+  - **403 Forbidden**: Access denied to note
+  - **404 Not Found**: Note not found
+  - **500 Internal Server Error**: Server error
+
+  ## Related Endpoints
+  - POST /api/v1/notes/:id/restore - Restore a soft-deleted note
+  - DELETE permanently handled via admin cleanup jobs
+}

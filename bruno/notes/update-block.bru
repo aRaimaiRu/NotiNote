@@ -1,0 +1,246 @@
+meta {
+  name: Update Block
+  type: http
+  seq: 15
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/notes/1/blocks/block-1
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "content": {
+      "rich_text": [
+        {
+          "text": "Updated paragraph content with new text.",
+          "style": {
+            "bold": false,
+            "italic": true,
+            "underline": false,
+            "strikethrough": false,
+            "code": false,
+            "link": "",
+            "color": "",
+            "background": ""
+          }
+        }
+      ]
+    }
+  }
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Response has success flag", function() {
+    expect(res.body).to.have.property('success');
+    expect(res.body.success).to.be.true;
+  });
+
+  test("Updated block is in response", function() {
+    const blocks = res.body.data.blocks;
+    const updatedBlock = blocks.find(b => b.id === 'block-1');
+    expect(updatedBlock).to.exist;
+  });
+
+  test("Block content was updated", function() {
+    const blocks = res.body.data.blocks;
+    const updatedBlock = blocks.find(b => b.id === 'block-1');
+    expect(updatedBlock.content.rich_text[0].text).to.include('Updated paragraph');
+  });
+
+  test("Note updated_at timestamp changed", function() {
+    const note = res.body.data;
+    expect(note).to.have.property('updated_at').to.be.a('string');
+  });
+}
+
+docs {
+  # Update Block
+  Update the content of an existing block within a note. Use PATCH to update only the content.
+
+  ## Authentication
+  Required: Bearer token (JWT)
+
+  ## Path Parameters
+  - **id** (required): The ID of the note
+  - **block_id** (required): The ID of the block to update
+
+  ## Request Body
+  ```json
+  {
+    "content": {
+      "rich_text": [
+        {
+          "text": "Updated text content",
+          "style": {
+            "bold": false,
+            "italic": false,
+            "underline": false,
+            "strikethrough": false,
+            "code": false,
+            "link": "",
+            "color": "",
+            "background": ""
+          }
+        }
+      ]
+    }
+  }
+  ```
+
+  ### Field Specifications
+  - **content** (required): New content for the block, matching the block's type
+
+  ## Content Formats by Block Type
+
+  ### Text Blocks (paragraph, heading_*, quote)
+  ```json
+  {
+    "rich_text": [
+      {
+        "text": "Text content",
+        "style": {
+          "bold": false,
+          "italic": false,
+          "underline": false,
+          "strikethrough": false,
+          "code": false,
+          "link": "https://example.com",
+          "color": "#FF0000",
+          "background": "#FFFF00"
+        }
+      },
+      {
+        "text": " more text",
+        "style": { "bold": true }
+      }
+    ]
+  }
+  ```
+
+  ### Code Block
+  ```json
+  {
+    "language": "python",
+    "code": "print('Hello, World!')"
+  }
+  ```
+
+  ### Checkbox Block
+  ```json
+  {
+    "checked": true,
+    "rich_text": [
+      {
+        "text": "Completed task"
+      }
+    ]
+  }
+  ```
+
+  ### List Blocks (bullet_list, numbered_list)
+  ```json
+  {
+    "rich_text": [
+      {
+        "text": "Updated list item"
+      }
+    ]
+  }
+  ```
+
+  ## Response Format
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": 1,
+      "user_id": 1,
+      "title": "Meeting Notes",
+      "blocks": [
+        {
+          "id": "block-1",
+          "type": "paragraph",
+          "content": {
+            "rich_text": [
+              {
+                "text": "Updated paragraph content with new text.",
+                "style": { "italic": true }
+              }
+            ]
+          },
+          "order": 0
+        }
+      ],
+      "is_archived": false,
+      "is_deleted": false,
+      "created_at": "2025-12-30T10:00:00Z",
+      "updated_at": "2025-12-30T14:00:00Z"
+    }
+  }
+  ```
+
+  ## Behavior
+  - Only content is updated; block ID and type remain unchanged
+  - Block order is preserved
+  - Note updated_at timestamp updated
+  - Preserves styling and formatting information
+
+  ## Error Responses
+
+  ### 400 Bad Request - Invalid Content
+  ```json
+  {
+    "error": "block content is required"
+  }
+  ```
+
+  ### 400 Bad Request - Block Not Found
+  ```json
+  {
+    "error": "block not found"
+  }
+  ```
+
+  ### 404 Not Found - Note Not Found
+  ```json
+  {
+    "error": "note not found"
+  }
+  ```
+
+  ### 403 Forbidden
+  ```json
+  {
+    "error": "access denied"
+  }
+  ```
+
+  ## Status Codes
+  - **200 OK**: Block successfully updated
+  - **400 Bad Request**: Invalid request body, missing content, or block not found
+  - **401 Unauthorized**: Missing or invalid authentication
+  - **403 Forbidden**: Access denied to note
+  - **404 Not Found**: Note not found
+  - **500 Internal Server Error**: Server error
+
+  ## Related Endpoints
+  - POST /api/v1/notes/:id/blocks - Add new block
+  - DELETE /api/v1/notes/:id/blocks/:block_id - Delete block
+  - PUT /api/v1/notes/:id/blocks - Replace all blocks
+  - POST /api/v1/notes/:id/blocks/reorder - Reorder blocks
+}

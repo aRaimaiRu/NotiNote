@@ -30,25 +30,48 @@ type UserRepository interface {
 	List(ctx context.Context, limit, offset int) ([]*domain.User, int64, error)
 }
 
+// NoteFilters represents filtering options for notes
+type NoteFilters struct {
+	ParentID    *int64
+	IsArchived  *bool
+	ViewType    *domain.ViewType
+	Properties  map[string]interface{} // Filter by custom properties
+	SearchQuery string                 // Full-text search on title
+	Limit       int
+	Offset      int
+	SortBy      string // "created_at", "updated_at", "title", "position"
+	SortOrder   string // "asc", "desc"
+}
+
 // NoteRepository defines the interface for note data persistence
 type NoteRepository interface {
-	// Create creates a new note
-	Create(ctx context.Context, note interface{}) error
-
-	// FindByID finds a note by ID
-	FindByID(ctx context.Context, id int64) (interface{}, error)
-
-	// FindByUserID finds all notes for a user
-	FindByUserID(ctx context.Context, userID int64, limit, offset int) ([]interface{}, int64, error)
-
-	// Update updates a note
-	Update(ctx context.Context, note interface{}) error
-
-	// Delete deletes a note
+	// Basic CRUD operations
+	Create(ctx context.Context, note *domain.Note) error
+	FindByID(ctx context.Context, id int64) (*domain.Note, error)
+	Update(ctx context.Context, note *domain.Note) error
 	Delete(ctx context.Context, id int64) error
 
-	// Search searches notes by title or content
-	Search(ctx context.Context, userID int64, query string, tags []string, limit, offset int) ([]interface{}, int64, error)
+	// User notes with filtering
+	FindByUserID(ctx context.Context, userID int64, filters NoteFilters) ([]*domain.Note, int64, error)
+
+	// Hierarchy operations
+	FindChildren(ctx context.Context, parentID int64) ([]*domain.Note, error)
+	FindDescendants(ctx context.Context, parentID int64) ([]*domain.Note, error)
+	FindAncestors(ctx context.Context, noteID int64) ([]*domain.Note, error)
+	MoveNote(ctx context.Context, noteID int64, newParentID *int64, newPosition int) error
+
+	// Block operations
+	UpdateBlocks(ctx context.Context, noteID int64, blocks []domain.Block) error
+
+	// Search and filter
+	Search(ctx context.Context, userID int64, query string, filters NoteFilters) ([]*domain.Note, int64, error)
+
+	// Bulk operations
+	BulkArchive(ctx context.Context, noteIDs []int64) error
+	BulkDelete(ctx context.Context, noteIDs []int64) error
+
+	// Permission check (for ownership)
+	CheckOwnership(ctx context.Context, noteID, userID int64) (bool, error)
 }
 
 // NotificationRepository defines the interface for notification data persistence

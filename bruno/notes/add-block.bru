@@ -1,0 +1,244 @@
+meta {
+  name: Add Block
+  type: http
+  seq: 14
+}
+
+post {
+  url: {{baseUrl}}/api/v1/notes/1/blocks
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "type": "paragraph",
+    "content": {
+      "rich_text": [
+        {
+          "text": "This is a new paragraph block added to the note.",
+          "style": {
+            "bold": false,
+            "italic": false,
+            "underline": false,
+            "strikethrough": false,
+            "code": false,
+            "link": "",
+            "color": "",
+            "background": ""
+          }
+        }
+      ]
+    }
+  }
+}
+
+tests {
+  test("Status code is 201 Created", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+
+  test("Response has success flag", function() {
+    expect(res.body).to.have.property('success');
+    expect(res.body.success).to.be.true;
+  });
+
+  test("Response includes updated note", function() {
+    expect(res.body).to.have.property('data');
+    const note = res.body.data;
+    expect(note).to.have.property('blocks').to.be.an('array');
+  });
+
+  test("New block was added to note", function() {
+    const blocks = res.body.data.blocks;
+    expect(blocks.length).to.be.greaterThan(0);
+    const newBlock = blocks[blocks.length - 1];
+    expect(newBlock.type).to.equal('paragraph');
+  });
+
+  test("Block has auto-generated ID", function() {
+    const blocks = res.body.data.blocks;
+    const newBlock = blocks[blocks.length - 1];
+    expect(newBlock).to.have.property('id').to.be.a('string');
+    expect(newBlock.id.length).to.be.greaterThan(0);
+  });
+}
+
+docs {
+  # Add Block
+  Add a new block to the end of a note. The block ID is auto-generated if not provided.
+
+  ## Authentication
+  Required: Bearer token (JWT)
+
+  ## Path Parameters
+  - **id** (required): The ID of the note
+
+  ## Request Body
+  ```json
+  {
+    "type": "paragraph",
+    "content": {
+      "rich_text": [
+        {
+          "text": "Block content text",
+          "style": {
+            "bold": false,
+            "italic": false,
+            "underline": false,
+            "strikethrough": false,
+            "code": false,
+            "link": "",
+            "color": "",
+            "background": ""
+          }
+        }
+      ]
+    }
+  }
+  ```
+
+  ### Field Specifications
+  - **type** (required): Block type (paragraph, heading_1-6, bullet_list, numbered_list, checkbox, quote, code, divider)
+  - **content** (required): Content structure matching block type (see Replace All Blocks for details)
+
+  ## Block Type Content Examples
+
+  ### Paragraph
+  ```json
+  {
+    "type": "paragraph",
+    "content": {
+      "rich_text": [
+        {
+          "text": "Paragraph text"
+        }
+      ]
+    }
+  }
+  ```
+
+  ### Heading
+  ```json
+  {
+    "type": "heading_1",
+    "content": {
+      "rich_text": [
+        {
+          "text": "Heading Text",
+          "style": { "bold": true }
+        }
+      ]
+    }
+  }
+  ```
+
+  ### Code Block
+  ```json
+  {
+    "type": "code",
+    "content": {
+      "language": "javascript",
+      "code": "const x = 42;"
+    }
+  }
+  ```
+
+  ### Checkbox
+  ```json
+  {
+    "type": "checkbox",
+    "content": {
+      "checked": false,
+      "rich_text": [
+        {
+          "text": "Task to complete"
+        }
+      ]
+    }
+  }
+  ```
+
+  ### Divider
+  ```json
+  {
+    "type": "divider",
+    "content": {}
+  }
+  ```
+
+  ## Response Format
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": 1,
+      "user_id": 1,
+      "title": "Meeting Notes",
+      "blocks": [
+        {
+          "id": "auto-generated-uuid",
+          "type": "paragraph",
+          "content": { ... },
+          "order": 2
+        }
+      ],
+      "is_archived": false,
+      "is_deleted": false,
+      "created_at": "2025-12-30T10:00:00Z",
+      "updated_at": "2025-12-30T13:45:00Z"
+    }
+  }
+  ```
+
+  ## Behavior
+  - Block is added to end of note
+  - Block ID auto-generated (UUID v4) if not provided
+  - Order value auto-assigned based on current block count
+  - Note updated_at timestamp updated
+
+  ## Error Responses
+
+  ### 400 Bad Request - Invalid Type
+  ```json
+  {
+    "error": "invalid block type"
+  }
+  ```
+
+  ### 400 Bad Request - Missing Content
+  ```json
+  {
+    "error": "block content is required"
+  }
+  ```
+
+  ### 404 Not Found
+  ```json
+  {
+    "error": "note not found"
+  }
+  ```
+
+  ## Status Codes
+  - **201 Created**: Block successfully added
+  - **400 Bad Request**: Invalid request body or validation error
+  - **401 Unauthorized**: Missing or invalid authentication
+  - **403 Forbidden**: Access denied to note
+  - **404 Not Found**: Note not found
+  - **500 Internal Server Error**: Server error
+
+  ## Related Endpoints
+  - PUT /api/v1/notes/:id/blocks - Replace all blocks
+  - PATCH /api/v1/notes/:id/blocks/:block_id - Update block content
+  - DELETE /api/v1/notes/:id/blocks/:block_id - Delete block
+  - POST /api/v1/notes/:id/blocks/reorder - Reorder blocks
+}

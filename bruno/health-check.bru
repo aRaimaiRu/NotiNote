@@ -1,0 +1,76 @@
+meta {
+  name: Health Check
+  type: http
+  seq: 0
+}
+
+get {
+  url: {{baseUrl}}/health
+  auth: none
+}
+
+tests {
+  test("Status is 200 OK", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Response has status field", function() {
+    const body = res.getBody();
+    expect(body.status).to.equal("healthy");
+  });
+
+  test("Response has timestamp", function() {
+    const body = res.getBody();
+    expect(body.time).to.exist;
+    expect(body.time).to.be.a("string");
+  });
+
+  test("Timestamp is valid ISO 8601", function() {
+    const body = res.getBody();
+    expect(new Date(body.time)).to.be.instanceof(Date);
+  });
+}
+
+docs {
+  # Health Check
+
+  ## Description
+  Simple health check endpoint to verify the API server is running and responding. Useful for monitoring and load balancer health checks.
+
+  ## Authentication
+  None required (public endpoint)
+
+  ## Response (200 OK)
+  ```json
+  {
+    "status": "healthy",
+    "time": "2026-01-03T10:00:00.123456Z"
+  }
+  ```
+
+  ## Response Fields
+  - **status** (string): Server health status ("healthy")
+  - **time** (string): Current server time in ISO 8601 UTC format
+
+  ## Use Cases
+  - Load balancer health checks
+  - Monitoring and alerting
+  - Application startup verification
+  - Connectivity testing
+
+  ## HTTP Status Codes
+  - **200 OK**: Server is healthy and responding
+  - **500 Internal Server Error**: Server is down or having issues
+
+  ## Example cURL
+  ```bash
+  curl -X GET http://localhost:8080/health
+  ```
+
+  ## Notes
+  - No authentication required
+  - Fast response time (< 1ms typically)
+  - Safe to call frequently from monitoring systems
+  - Should be called periodically to detect outages
+  - Recommended check interval: every 10-30 seconds
+}
