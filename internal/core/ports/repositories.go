@@ -72,6 +72,11 @@ type NoteRepository interface {
 
 	// Permission check (for ownership)
 	CheckOwnership(ctx context.Context, noteID, userID int64) (bool, error)
+
+	// Tag operations
+	AddTag(ctx context.Context, noteID int64, tagID string) error
+	RemoveTag(ctx context.Context, noteID int64, tagID string) error
+	GetNoteTags(ctx context.Context, noteID int64) ([]domain.Tag, error)
 }
 
 // NotificationRepository defines the interface for notification data persistence

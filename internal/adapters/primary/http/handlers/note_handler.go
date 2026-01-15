@@ -744,3 +744,105 @@ func (h *NoteHandler) ReorderBlocks(c *gin.Context) {
 		"data":    dtos.ToNoteResponse(note),
 	})
 }
+
+// ToggleFavorite handles PATCH /api/v1/notes/:id/favorite
+func (h *NoteHandler) ToggleFavorite(c *gin.Context) {
+	noteID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid note ID"})
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+
+	note, err := h.noteService.ToggleFavorite(c.Request.Context(), noteID, userID.(int64))
+	if err != nil {
+		if err == domain.ErrNoteNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "note not found"})
+			return
+		}
+		if err == domain.ErrUnauthorizedAccess {
+			c.JSON(http.StatusForbidden, gin.H{"error": "access denied"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to toggle favorite"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    dtos.ToNoteResponse(note),
+	})
+}
+
+// AddTagToNote handles POST /api/v1/notes/:id/tags/:tag_id
+func (h *NoteHandler) AddTagToNote(c *gin.Context) {
+	noteID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid note ID"})
+		return
+	}
+
+	tagID := c.Param("tag_id")
+	if tagID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "tag ID is required"})
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+
+	note, err := h.noteService.AddTag(c.Request.Context(), noteID, userID.(int64), tagID)
+	if err != nil {
+		if err == domain.ErrNoteNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "note not found"})
+			return
+		}
+		if err == domain.ErrUnauthorizedAccess {
+			c.JSON(http.StatusForbidden, gin.H{"error": "access denied"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to add tag"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    dtos.ToNoteResponse(note),
+	})
+}
+
+// RemoveTagFromNote handles DELETE /api/v1/notes/:id/tags/:tag_id
+func (h *NoteHandler) RemoveTagFromNote(c *gin.Context) {
+	noteID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid note ID"})
+		return
+	}
+
+	tagID := c.Param("tag_id")
+	if tagID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "tag ID is required"})
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+
+	note, err := h.noteService.RemoveTag(c.Request.Context(), noteID, userID.(int64), tagID)
+	if err != nil {
+		if err == domain.ErrNoteNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "note not found"})
+			return
+		}
+		if err == domain.ErrUnauthorizedAccess {
+			c.JSON(http.StatusForbidden, gin.H{"error": "access denied"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to remove tag"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    dtos.ToNoteResponse(note),
+	})
+}

@@ -123,6 +123,16 @@ type ViewMetadata struct {
 	Sorts      []ViewSort     `json:"sorts,omitempty"`
 }
 
+// Tag represents a tag entity for categorizing notes
+type Tag struct {
+	ID        string    `json:"id"`
+	UserID    int64     `json:"user_id"`
+	Name      string    `json:"name"`
+	Color     string    `json:"color"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
 // Note represents a note entity in the domain (similar to Notion pages)
 type Note struct {
 	ID           int64                  `json:"id"`
@@ -139,6 +149,8 @@ type Note struct {
 	Position     int                    `json:"position"`
 	IsArchived   bool                   `json:"is_archived"`
 	IsDeleted    bool                   `json:"is_deleted"`
+	IsFavorite   bool                   `json:"is_favorite"`
+	Tags         []Tag                  `json:"tags,omitempty"`
 	CreatedAt    time.Time              `json:"created_at"`
 	UpdatedAt    time.Time              `json:"updated_at"`
 }
@@ -328,6 +340,12 @@ func (n *Note) SoftDelete() {
 // Restore restores a soft-deleted note
 func (n *Note) Restore() {
 	n.IsDeleted = false
+	n.UpdatedAt = time.Now()
+}
+
+// ToggleFavorite toggles the favorite status of a note
+func (n *Note) ToggleFavorite() {
+	n.IsFavorite = !n.IsFavorite
 	n.UpdatedAt = time.Now()
 }
 

@@ -101,6 +101,11 @@ func SetupRouter(cfg RouterConfig) *gin.Engine {
 					// View and properties
 					notes.PUT("/:id/view", cfg.NoteHandler.UpdateViewMetadata)
 					notes.PUT("/:id/properties", cfg.NoteHandler.UpdateProperties)
+
+					// Favorite and tags
+					notes.PATCH("/:id/favorite", cfg.NoteHandler.ToggleFavorite)
+					notes.POST("/:id/tags/:tag_id", cfg.NoteHandler.AddTagToNote)
+					notes.DELETE("/:id/tags/:tag_id", cfg.NoteHandler.RemoveTagFromNote)
 				}
 			}
 

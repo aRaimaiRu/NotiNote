@@ -56,7 +56,18 @@ func (r *NoteRepository) FindByID(ctx context.Context, id int64) (*domain.Note, 
 		return nil, fmt.Errorf("failed to find note: %w", err)
 	}
 
-	return dbNote.ToDomain(), nil
+	note := dbNote.ToDomain()
+
+	// Load tags for the note
+	tags, err := r.GetNoteTags(ctx, id)
+	if err != nil {
+		// Log error but don't fail the request
+		// Tags are optional
+		tags = []domain.Tag{}
+	}
+	note.Tags = tags
+
+	return note, nil
 }
 
 // Update updates a note
@@ -480,4 +491,53 @@ func (r *NoteRepository) parseAncestorIDs(path string, excludeID int64) []int64 
 	}
 
 	return ancestorIDs
+}
+
+// AddTag adds a tag to a note (creates note_tags association)
+func (r *NoteRepository) AddTag(ctx context.Context, noteID int64, tagID string) error {
+	// Use raw SQL to insert into note_tags junction table
+	// This avoids duplicates with ON CONFLICT DO NOTHING
+	query := `
+		INSERT INTO note_tags (note_id, tag_id, created_at)
+		VALUES (?, ?, CURRENT_TIMESTAMP)
+		ON CONFLICT (note_id, tag_id) DO NOTHING
+	`
+
+	if err := r.db.WithContext(ctx).Exec(query, noteID, tagID).Error; err != nil {
+		return fmt.Errorf("failed to add tag to note: %w", err)
+	}
+
+	return nil
+}
+
+// RemoveTag removes a tag from a note (deletes note_tags association)
+func (r *NoteRepository) RemoveTag(ctx context.Context, noteID int64, tagID string) error {
+	// Delete from note_tags junction table
+	query := `DELETE FROM note_tags WHERE note_id = ? AND tag_id = ?`
+
+	if err := r.db.WithContext(ctx).Exec(query, noteID, tagID).Error; err != nil {
+		return fmt.Errorf("failed to remove tag from note: %w", err)
+	}
+
+	return nil
+}
+
+// GetNoteTags retrieves all tags associated with a note
+func (r *NoteRepository) GetNoteTags(ctx context.Context, noteID int64) ([]domain.Tag, error) {
+	var tags []domain.Tag
+
+	// Join note_tags with tags table to get full tag info
+	query := `
+		SELECT t.id, t.user_id, t.name, t.color, t.created_at, t.updated_at
+		FROM tags t
+		INNER JOIN note_tags nt ON t.id = nt.tag_id
+		WHERE nt.note_id = ?
+		ORDER BY t.name ASC
+	`
+
+	if err := r.db.WithContext(ctx).Raw(query, noteID).Scan(&tags).Error; err != nil {
+		return nil, fmt.Errorf("failed to get note tags: %w", err)
+	}
+
+	return tags, nil
 }

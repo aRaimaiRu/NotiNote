@@ -465,3 +465,64 @@ func (s *NoteService) UpdateProperties(ctx context.Context, noteID, userID int64
 
 	return note, nil
 }
+
+// ToggleFavorite toggles the favorite status of a note
+func (s *NoteService) ToggleFavorite(ctx context.Context, noteID, userID int64) (*domain.Note, error) {
+	note, err := s.GetNote(ctx, noteID, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Toggle favorite using domain method
+	note.ToggleFavorite()
+
+	if err := s.noteRepo.Update(ctx, note); err != nil {
+		return nil, fmt.Errorf("failed to toggle favorite: %w", err)
+	}
+
+	return note, nil
+}
+
+// AddTag adds a tag to a note
+func (s *NoteService) AddTag(ctx context.Context, noteID, userID int64, tagID string) (*domain.Note, error) {
+	// Verify note ownership
+	_, err := s.GetNote(ctx, noteID, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Add tag via repository
+	if err := s.noteRepo.AddTag(ctx, noteID, tagID); err != nil {
+		return nil, fmt.Errorf("failed to add tag: %w", err)
+	}
+
+	// Reload note with updated tags
+	updatedNote, err := s.GetNote(ctx, noteID, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return updatedNote, nil
+}
+
+// RemoveTag removes a tag from a note
+func (s *NoteService) RemoveTag(ctx context.Context, noteID, userID int64, tagID string) (*domain.Note, error) {
+	// Verify note ownership
+	_, err := s.GetNote(ctx, noteID, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Remove tag via repository
+	if err := s.noteRepo.RemoveTag(ctx, noteID, tagID); err != nil {
+		return nil, fmt.Errorf("failed to remove tag: %w", err)
+	}
+
+	// Reload note with updated tags
+	updatedNote, err := s.GetNote(ctx, noteID, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return updatedNote, nil
+}

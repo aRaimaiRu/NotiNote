@@ -25,6 +25,7 @@ type Note struct {
 	Position     int            `gorm:"not null;default:0;index:idx_notes_position"`
 	IsArchived   bool           `gorm:"not null;default:false"`
 	IsDeleted    bool           `gorm:"not null;default:false"`
+	IsFavorite   bool           `gorm:"not null;default:false"`
 	CreatedAt    time.Time      `gorm:"autoCreateTime;index:idx_notes_created_at"`
 	UpdatedAt    time.Time      `gorm:"autoUpdateTime"`
 	DeletedAt    gorm.DeletedAt `gorm:"index"`
@@ -162,6 +163,8 @@ func (n *Note) ToDomain() *domain.Note {
 		Position:     n.Position,
 		IsArchived:   n.IsArchived,
 		IsDeleted:    n.IsDeleted,
+		IsFavorite:   n.IsFavorite,
+		Tags:         []domain.Tag{}, // Tags loaded separately in repository
 		CreatedAt:    n.CreatedAt,
 		UpdatedAt:    n.UpdatedAt,
 	}
@@ -183,6 +186,7 @@ func (n *Note) FromDomain(domainNote *domain.Note) {
 	n.Position = domainNote.Position
 	n.IsArchived = domainNote.IsArchived
 	n.IsDeleted = domainNote.IsDeleted
+	n.IsFavorite = domainNote.IsFavorite
 	n.CreatedAt = domainNote.CreatedAt
 	n.UpdatedAt = domainNote.UpdatedAt
 }
