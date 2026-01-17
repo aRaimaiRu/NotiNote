@@ -2,6 +2,7 @@ package ports
 
 import (
 	"context"
+	"time"
 
 	"github.com/yourusername/notinoteapp/internal/core/domain"
 )
@@ -106,23 +107,107 @@ type NotificationRepository interface {
 // DeviceRepository defines the interface for device data persistence
 type DeviceRepository interface {
 	// Create creates a new device registration
-	Create(ctx context.Context, device interface{}) error
+	Create(ctx context.Context, device *domain.Device) error
 
 	// FindByID finds a device by ID
-	FindByID(ctx context.Context, id int64) (interface{}, error)
+	FindByID(ctx context.Context, id int64) (*domain.Device, error)
 
 	// FindByUserID finds all devices for a user
-	FindByUserID(ctx context.Context, userID int64) ([]interface{}, error)
+	FindByUserID(ctx context.Context, userID int64) ([]*domain.Device, error)
+
+	// FindActiveByUserID finds all active devices for a user
+	FindActiveByUserID(ctx context.Context, userID int64) ([]*domain.Device, error)
 
 	// FindByToken finds a device by token
-	FindByToken(ctx context.Context, token string) (interface{}, error)
+	FindByToken(ctx context.Context, token string) (*domain.Device, error)
+
+	// FindByUserIDAndToken finds a device by user ID and token
+	FindByUserIDAndToken(ctx context.Context, userID int64, token string) (*domain.Device, error)
 
 	// Update updates device information
-	Update(ctx context.Context, device interface{}) error
+	Update(ctx context.Context, device *domain.Device) error
 
 	// Delete deletes a device
 	Delete(ctx context.Context, id int64) error
 
-	// DeactivateByToken deactivates a device by token
-	DeactivateByToken(ctx context.Context, token string) error
+	// DeleteByToken deletes a device by user ID and token
+	DeleteByToken(ctx context.Context, userID int64, token string) error
+
+	// UpdateLastUsed updates the last used timestamp
+	UpdateLastUsed(ctx context.Context, id int64) error
+
+	// DeactivateStaleDevices deactivates devices not used since the given time
+	DeactivateStaleDevices(ctx context.Context, before time.Time) (int64, error)
+}
+
+// ReminderQueryParams represents filtering options for reminders
+type ReminderQueryParams struct {
+	IsEnabled *bool
+	FromDate  *time.Time
+	ToDate    *time.Time
+	Limit     int
+	Offset    int
+}
+
+// ReminderRepository defines the interface for reminder data persistence
+type ReminderRepository interface {
+	// Create creates a new reminder
+	Create(ctx context.Context, reminder *domain.Reminder) error
+
+	// FindByID finds a reminder by ID
+	FindByID(ctx context.Context, id int64) (*domain.Reminder, error)
+
+	// FindByNoteID finds all reminders for a note
+	FindByNoteID(ctx context.Context, noteID int64) ([]*domain.Reminder, error)
+
+	// FindByUserID finds all reminders for a user with filters
+	FindByUserID(ctx context.Context, userID int64, params *ReminderQueryParams) ([]*domain.Reminder, error)
+
+	// FindDueReminders finds all enabled reminders that are due (next_trigger_at <= until)
+	FindDueReminders(ctx context.Context, until time.Time, limit int) ([]*domain.Reminder, error)
+
+	// Update updates a reminder
+	Update(ctx context.Context, reminder *domain.Reminder) error
+
+	// Delete deletes a reminder
+	Delete(ctx context.Context, id int64) error
+
+	// DeleteByNoteID deletes all reminders for a note
+	DeleteByNoteID(ctx context.Context, noteID int64) error
+
+	// UpdateNextTrigger updates the next trigger time and last triggered time
+	UpdateNextTrigger(ctx context.Context, id int64, nextTrigger time.Time, lastTriggered time.Time) error
+
+	// IncrementTriggerCount increments the trigger count for a reminder
+	IncrementTriggerCount(ctx context.Context, id int64) error
+
+	// CheckOwnership checks if a reminder belongs to a user
+	CheckOwnership(ctx context.Context, reminderID, userID int64) (bool, error)
+}
+
+// NotificationLogRepository defines the interface for notification log data persistence
+type NotificationLogRepository interface {
+	// Create creates a new notification log entry
+	Create(ctx context.Context, log *domain.NotificationLog) error
+
+	// FindByID finds a log entry by ID
+	FindByID(ctx context.Context, id int64) (*domain.NotificationLog, error)
+
+	// FindByUserID finds log entries for a user
+	FindByUserID(ctx context.Context, userID int64, limit, offset int) ([]*domain.NotificationLog, int64, error)
+
+	// FindByReminderID finds log entries for a reminder
+	FindByReminderID(ctx context.Context, reminderID int64) ([]*domain.NotificationLog, error)
+
+	// FindPendingLogs finds all pending notification logs
+	FindPendingLogs(ctx context.Context, limit int) ([]*domain.NotificationLog, error)
+
+	// UpdateStatus updates the status of a notification log
+	UpdateStatus(ctx context.Context, id int64, status domain.NotificationStatus, errorMessage string) error
+
+	// MarkAsSent marks a log as successfully sent
+	MarkAsSent(ctx context.Context, id int64, fcmMessageID string) error
+
+	// DeleteOldLogs deletes logs older than the given time
+	DeleteOldLogs(ctx context.Context, before time.Time) (int64, error)
 }

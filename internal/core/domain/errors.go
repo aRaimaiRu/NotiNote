@@ -29,15 +29,23 @@ var (
 
 // Notification errors
 var (
-	ErrNotificationNotFound = errors.New("notification not found")
-	ErrInvalidScheduleTime  = errors.New("schedule time must be in the future")
+	ErrNotificationNotFound  = errors.New("notification not found")
+	ErrInvalidScheduleTime   = errors.New("schedule time must be in the future")
 	ErrNotificationCancelled = errors.New("notification has been cancelled")
+	ErrNotificationFailed    = errors.New("failed to send notification")
 )
 
 // Device errors
 var (
-	ErrDeviceNotFound    = errors.New("device not found")
-	ErrInvalidDeviceToken = errors.New("invalid device token")
+	ErrDeviceNotFound      = errors.New("device not found")
+	ErrInvalidDeviceToken  = errors.New("invalid device token")
+	ErrNoActiveDevices     = errors.New("no active devices found for user")
+	ErrFCMSendFailed       = errors.New("failed to send FCM notification")
+)
+
+// Reminder errors
+var (
+	ErrReminderAccessDenied = errors.New("access denied to this reminder")
 )
 
 // Generic errors
