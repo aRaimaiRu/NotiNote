@@ -11,13 +11,16 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	"github.com/sirupsen/logrus"
 	httpAdapter "github.com/yourusername/notinoteapp/internal/adapters/primary/http"
 	"github.com/yourusername/notinoteapp/internal/adapters/primary/http/handlers"
 	redisCache "github.com/yourusername/notinoteapp/internal/adapters/secondary/cache/redis"
 	"github.com/yourusername/notinoteapp/internal/adapters/secondary/database/postgres"
 	"github.com/yourusername/notinoteapp/internal/adapters/secondary/database/postgres/repositories"
+	"github.com/yourusername/notinoteapp/internal/adapters/secondary/messaging/fcm"
 	"github.com/yourusername/notinoteapp/internal/adapters/secondary/oauth"
 	"github.com/yourusername/notinoteapp/internal/application/services"
+	"github.com/yourusername/notinoteapp/internal/core/ports"
 	coreServices "github.com/yourusername/notinoteapp/internal/core/services"
 	"github.com/yourusername/notinoteapp/pkg/config"
 	"github.com/yourusername/notinoteapp/pkg/logger"
@@ -67,6 +70,9 @@ func main() {
 	// Initialize repositories
 	userRepo := repositories.NewUserRepository(db)
 	noteRepo := repositories.NewNoteRepository(db)
+	deviceRepo := repositories.NewDeviceRepository(db)
+	reminderRepo := repositories.NewReminderRepository(db)
+	notificationLogRepo := repositories.NewNotificationLogRepository(db)
 
 	// Initialize utilities
 	passwordHasher := utils.NewBcryptPasswordHasher()
@@ -131,15 +137,69 @@ func main() {
 		logger.Info("Facebook OAuth provider registered")
 	}
 
+	// Initialize FCM sender (optional - only if credentials file exists)
+	var fcmSender ports.NotificationSender
+	var notificationScheduler *services.NotificationScheduler
+
+	if cfg.FCM.CredentialsFile != "" {
+		if _, err := os.Stat(cfg.FCM.CredentialsFile); err == nil {
+			logrusLogger := logrus.New()
+			logrusLogger.SetLevel(logrus.InfoLevel)
+
+			fcmSender, err = fcm.NewFCMSender(cfg.FCM.CredentialsFile, logrusLogger)
+			if err != nil {
+				logger.Warnf("Failed to initialize FCM sender: %v. Push notifications will not work.", err)
+			} else {
+				logger.Info("FCM sender initialized successfully")
+			}
+		} else {
+			logger.Warnf("FCM credentials file not found at %s. Push notifications will not work.", cfg.FCM.CredentialsFile)
+		}
+	}
+
+	// Initialize notification services
+	logrusLogger := logrus.New()
+	logrusLogger.SetLevel(logrus.InfoLevel)
+
+	deviceService := services.NewDeviceService(deviceRepo, logrusLogger)
+	reminderService := services.NewReminderService(reminderRepo, noteRepo, logrusLogger)
+
+	// Initialize notification service and scheduler (only if FCM is available)
+	var notificationService *services.NotificationService
+	if fcmSender != nil {
+		notificationService = services.NewNotificationService(
+			deviceRepo,
+			notificationLogRepo,
+			fcmSender,
+			logrusLogger,
+		)
+
+		// Initialize and start notification scheduler
+		notificationScheduler = services.NewNotificationScheduler(
+			reminderRepo,
+			notificationService,
+			&cfg.Notification,
+			logrusLogger,
+		)
+		notificationScheduler.Start()
+		logger.Info("Notification scheduler started")
+	} else {
+		logger.Warn("Notification service not initialized - FCM sender unavailable")
+	}
+
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(authService)
 	noteHandler := handlers.NewNoteHandler(noteService)
+	deviceHandler := handlers.NewDeviceHandler(deviceService, logrusLogger)
+	reminderHandler := handlers.NewReminderHandler(reminderService, logrusLogger)
 
 	// Setup router
 	router := httpAdapter.SetupRouter(httpAdapter.RouterConfig{
-		AuthHandler: authHandler,
-		NoteHandler: noteHandler,
-		Config:      cfg,
+		AuthHandler:     authHandler,
+		NoteHandler:     noteHandler,
+		DeviceHandler:   deviceHandler,
+		ReminderHandler: reminderHandler,
+		Config:          cfg,
 	})
 
 	// Create HTTP server
@@ -165,6 +225,13 @@ func main() {
 	<-quit
 
 	logger.Info("Shutting down server...")
+
+	// Stop notification scheduler first
+	if notificationScheduler != nil {
+		logger.Info("Stopping notification scheduler...")
+		notificationScheduler.Stop()
+		logger.Info("Notification scheduler stopped")
+	}
 
 	// Graceful shutdown with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)

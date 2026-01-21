@@ -71,7 +71,7 @@ func (r *NoteRepository) FindByID(ctx context.Context, id int64) (*domain.Note, 
 }
 
 // Update updates a note
-func (r *NoteRepository) Update(ctx context.Context, note *domain.Note) error {
+func (r *NoteRepository) Update(ctx context.Context, note *domain.Note) (*domain.Note, error) {
 	dbNote := &models.Note{}
 	dbNote.FromDomain(note)
 
@@ -81,14 +81,14 @@ func (r *NoteRepository) Update(ctx context.Context, note *domain.Note) error {
 		Updates(dbNote)
 
 	if result.Error != nil {
-		return fmt.Errorf("failed to update note: %w", result.Error)
+		return nil, fmt.Errorf("failed to update note: %w", result.Error)
 	}
 
 	if result.RowsAffected == 0 {
-		return domain.ErrNoteNotFound
+		return nil, domain.ErrNoteNotFound
 	}
-
-	return nil
+	fmt.Println("dbNote",note.Blocks)
+	return note, nil
 }
 
 // Delete soft deletes a note

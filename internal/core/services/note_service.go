@@ -99,12 +99,14 @@ func (s *NoteService) UpdateNote(ctx context.Context, noteID, userID int64, titl
 		note.CoverImage = *coverImage
 	}
 
-	// Save changes
-	if err := s.noteRepo.Update(ctx, note); err != nil {
+	// Save changes and get the fresh state from the DB
+	updatedNote, err := s.noteRepo.Update(ctx, note)
+	if err != nil {
 		return nil, fmt.Errorf("failed to update note: %w", err)
 	}
 
-	return note, nil
+	// Returning updatedNote allows the API to send a 200 OK with the full body
+return updatedNote, nil 
 }
 
 // DeleteNote soft deletes a note and all its descendants
@@ -138,7 +140,7 @@ func (s *NoteService) DeleteNote(ctx context.Context, noteID, userID int64) erro
 	}
 
 	// Update the parent note
-	if err := s.noteRepo.Update(ctx, note); err != nil {
+	if _, err := s.noteRepo.Update(ctx, note); err != nil {
 		return fmt.Errorf("failed to delete note: %w", err)
 	}
 
@@ -161,11 +163,14 @@ func (s *NoteService) RestoreNote(ctx context.Context, noteID, userID int64) (*d
 	// Restore the note
 	note.Restore()
 
-	if err := s.noteRepo.Update(ctx, note); err != nil {
-		return nil, fmt.Errorf("failed to restore note: %w", err)
+	// Save changes and get the fresh state from the DB
+	updatedNote, err := s.noteRepo.Update(ctx, note)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update note: %w", err)
 	}
 
-	return note, nil
+	// Returning updatedNote allows the API to send a 200 OK with the full body
+	return updatedNote, nil 
 }
 
 // ArchiveNote archives a note
@@ -177,11 +182,14 @@ func (s *NoteService) ArchiveNote(ctx context.Context, noteID, userID int64) (*d
 
 	note.Archive()
 
-	if err := s.noteRepo.Update(ctx, note); err != nil {
-		return nil, fmt.Errorf("failed to archive note: %w", err)
+	// Save changes and get the fresh state from the DB
+	updatedNote, err := s.noteRepo.Update(ctx, note)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update note: %w", err)
 	}
 
-	return note, nil
+	// Returning updatedNote allows the API to send a 200 OK with the full body
+return updatedNote, nil 
 }
 
 // UnarchiveNote unarchives a note
@@ -197,11 +205,14 @@ func (s *NoteService) UnarchiveNote(ctx context.Context, noteID, userID int64) (
 
 	note.IsArchived = false
 
-	if err := s.noteRepo.Update(ctx, note); err != nil {
-		return nil, fmt.Errorf("failed to unarchive note: %w", err)
+	// Save changes and get the fresh state from the DB
+	updatedNote, err := s.noteRepo.Update(ctx, note)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update note: %w", err)
 	}
 
-	return note, nil
+	// Returning updatedNote allows the API to send a 200 OK with the full body
+	return updatedNote, nil 
 }
 
 // ListNotes retrieves notes with filtering and pagination
@@ -443,11 +454,14 @@ func (s *NoteService) UpdateViewMetadata(ctx context.Context, noteID, userID int
 
 	note.ViewMetadata = viewMetadata
 
-	if err := s.noteRepo.Update(ctx, note); err != nil {
-		return nil, fmt.Errorf("failed to update view metadata: %w", err)
+	// Save changes and get the fresh state from the DB
+	updatedNote, err := s.noteRepo.Update(ctx, note)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update note: %w", err)
 	}
 
-	return note, nil
+	// Returning updatedNote allows the API to send a 200 OK with the full body
+	return updatedNote, nil 
 }
 
 // UpdateProperties updates custom properties for a note
@@ -459,11 +473,14 @@ func (s *NoteService) UpdateProperties(ctx context.Context, noteID, userID int64
 
 	note.Properties = properties
 
-	if err := s.noteRepo.Update(ctx, note); err != nil {
-		return nil, fmt.Errorf("failed to update properties: %w", err)
+	// Save changes and get the fresh state from the DB
+	updatedNote, err := s.noteRepo.Update(ctx, note)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update note: %w", err)
 	}
 
-	return note, nil
+	// Returning updatedNote allows the API to send a 200 OK with the full body
+	return updatedNote, nil 
 }
 
 // ToggleFavorite toggles the favorite status of a note
@@ -476,11 +493,14 @@ func (s *NoteService) ToggleFavorite(ctx context.Context, noteID, userID int64) 
 	// Toggle favorite using domain method
 	note.ToggleFavorite()
 
-	if err := s.noteRepo.Update(ctx, note); err != nil {
-		return nil, fmt.Errorf("failed to toggle favorite: %w", err)
+	// Save changes and get the fresh state from the DB
+	updatedNote, err := s.noteRepo.Update(ctx, note)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update note: %w", err)
 	}
 
-	return note, nil
+	// Returning updatedNote allows the API to send a 200 OK with the full body
+	return updatedNote, nil 
 }
 
 // AddTag adds a tag to a note

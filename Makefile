@@ -16,7 +16,7 @@ GOFMT=$(GOCMD) fmt
 # Build flags
 LDFLAGS=-ldflags "-s -w"
 
-.PHONY: all build clean test coverage deps run dev migrate-up migrate-down migrate-create help
+.PHONY: all build clean test coverage deps run dev debug debug-headless debug-test migrate-up migrate-down migrate-create help
 
 all: clean deps build
 
@@ -26,6 +26,9 @@ help:
 	@echo "  make build          - Build the application binary"
 	@echo "  make run            - Run the application"
 	@echo "  make dev            - Run with live reload (requires air)"
+	@echo "  make debug          - Debug with Delve (interactive)"
+	@echo "  make debug-headless - Start Delve headless server on port 2345"
+	@echo "  make debug-test     - Debug tests (use PKG=./path/to/package)"
 	@echo "  make test           - Run all tests"
 	@echo "  make test-unit      - Run unit tests only"
 	@echo "  make test-integration - Run integration tests only"
@@ -65,6 +68,23 @@ run:
 dev:
 	@echo "Starting development server with live reload..."
 	@air
+
+## debug: Debug with Delve (interactive terminal)
+debug:
+	@echo "Starting Delve debugger..."
+	dlv debug $(MAIN_PATH)
+
+## debug-headless: Start Delve headless server for IDE connection
+debug-headless:
+	@echo "Starting Delve headless server on port 2345..."
+	@echo "Connect your IDE to 127.0.0.1:2345"
+	dlv debug $(MAIN_PATH) --headless --listen=:2345 --api-version=2 --accept-multiclient
+
+## debug-test: Debug tests with Delve
+debug-test:
+	@if [ -z "$(PKG)" ]; then echo "Usage: make debug-test PKG=./path/to/package"; exit 1; fi
+	@echo "Debugging tests in $(PKG)..."
+	dlv test $(PKG)
 
 ## clean: Clean build artifacts
 clean:

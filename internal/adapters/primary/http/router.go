@@ -12,9 +12,11 @@ import (
 
 // RouterConfig holds router configuration
 type RouterConfig struct {
-	AuthHandler *handlers.AuthHandler
-	NoteHandler *handlers.NoteHandler
-	Config      *config.Config
+	AuthHandler     *handlers.AuthHandler
+	NoteHandler     *handlers.NoteHandler
+	DeviceHandler   *handlers.DeviceHandler
+	ReminderHandler *handlers.ReminderHandler
+	Config          *config.Config
 }
 
 // SetupRouter sets up the HTTP router with all routes
@@ -106,25 +108,38 @@ func SetupRouter(cfg RouterConfig) *gin.Engine {
 					notes.PATCH("/:id/favorite", cfg.NoteHandler.ToggleFavorite)
 					notes.POST("/:id/tags/:tag_id", cfg.NoteHandler.AddTagToNote)
 					notes.DELETE("/:id/tags/:tag_id", cfg.NoteHandler.RemoveTagFromNote)
+
+					// Reminder routes (nested under notes)
+					if cfg.ReminderHandler != nil {
+						notes.POST("/:id/reminders", cfg.ReminderHandler.Create)
+						notes.GET("/:id/reminders", cfg.ReminderHandler.ListByNote)
+					}
 				}
 			}
 
-			// Notifications routes (placeholder for future implementation)
-			// notifications := protected.Group("/notifications")
-			// {
-			// 	notifications.GET("", notificationHandler.List)
-			// 	notifications.POST("", notificationHandler.Create)
-			// 	notifications.GET("/:id", notificationHandler.Get)
-			// 	notifications.PUT("/:id", notificationHandler.Update)
-			// 	notifications.DELETE("/:id", notificationHandler.Delete)
-			// }
+			// Device routes
+			if cfg.DeviceHandler != nil {
+				devices := protected.Group("/devices")
+				{
+					devices.POST("", cfg.DeviceHandler.Register)
+					devices.GET("", cfg.DeviceHandler.List)
+					devices.DELETE("/:id", cfg.DeviceHandler.Unregister)
+					devices.DELETE("/token", cfg.DeviceHandler.UnregisterByToken)
+				}
+			}
 
-			// Devices routes (placeholder for future implementation)
-			// devices := protected.Group("/devices")
-			// {
-			// 	devices.POST("", deviceHandler.Register)
-			// 	devices.DELETE("/:id", deviceHandler.Unregister)
-			// }
+			// Reminder routes (standalone)
+			if cfg.ReminderHandler != nil {
+				reminders := protected.Group("/reminders")
+				{
+					reminders.GET("", cfg.ReminderHandler.List)
+					reminders.GET("/:id", cfg.ReminderHandler.Get)
+					reminders.PUT("/:id", cfg.ReminderHandler.Update)
+					reminders.DELETE("/:id", cfg.ReminderHandler.Delete)
+					reminders.PATCH("/:id/toggle", cfg.ReminderHandler.Toggle)
+					reminders.POST("/:id/snooze", cfg.ReminderHandler.Snooze)
+				}
+			}
 		}
 	}
 

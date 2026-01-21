@@ -64,3 +64,5 @@ temp/
 # Coverage reports
 coverage.html
 coverage.txt
+
+admin-sdk.json

@@ -49,7 +49,7 @@ type NoteRepository interface {
 	// Basic CRUD operations
 	Create(ctx context.Context, note *domain.Note) error
 	FindByID(ctx context.Context, id int64) (*domain.Note, error)
-	Update(ctx context.Context, note *domain.Note) error
+	Update(ctx context.Context, note *domain.Note) (*domain.Note, error)
 	Delete(ctx context.Context, id int64) error
 
 	// User notes with filtering

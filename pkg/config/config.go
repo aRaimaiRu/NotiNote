@@ -18,7 +18,13 @@ type Config struct {
 	CORS         CORSConfig
 	RateLimit    RateLimitConfig
 	Notification NotificationConfig
+	FCM          FCMConfig
 	Log          LogConfig
+}
+
+// FCMConfig holds Firebase Cloud Messaging configuration
+type FCMConfig struct {
+	CredentialsFile string
 }
 
 // ServerConfig holds server configuration
@@ -165,6 +171,9 @@ func Load() (*Config, error) {
 			WorkerCount:       parseInt(getEnv("NOTIFICATION_WORKER_COUNT", "5"), 5),
 			MaxRetries:        parseInt(getEnv("NOTIFICATION_MAX_RETRIES", "3"), 3),
 			RetryBackoff:      parseDuration(getEnv("NOTIFICATION_RETRY_BACKOFF", "1m"), 1*time.Minute),
+		},
+		FCM: FCMConfig{
+			CredentialsFile: getEnv("FCM_CREDENTIALS_FILE", ""),
 		},
 		Log: LogConfig{
 			Level:  getEnv("LOG_LEVEL", "info"),

@@ -29,10 +29,11 @@ var (
 
 // Notification errors
 var (
-	ErrNotificationNotFound  = errors.New("notification not found")
-	ErrInvalidScheduleTime   = errors.New("schedule time must be in the future")
-	ErrNotificationCancelled = errors.New("notification has been cancelled")
-	ErrNotificationFailed    = errors.New("failed to send notification")
+	ErrNotificationNotFound    = errors.New("notification not found")
+	ErrNotificationLogNotFound = errors.New("notification log not found")
+	ErrInvalidScheduleTime     = errors.New("schedule time must be in the future")
+	ErrNotificationCancelled   = errors.New("notification has been cancelled")
+	ErrNotificationFailed      = errors.New("failed to send notification")
 )
 
 // Device errors
